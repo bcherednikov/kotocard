@@ -220,7 +220,7 @@ export default function StudyPage() {
           onClick={!isFlipped ? handleFlip : undefined}
         >
           <div 
-            className={`relative w-full transition-transform duration-500 transform-style-3d ${
+            className={`relative w-full h-full transition-transform duration-500 transform-style-3d ${
               isFlipped ? 'rotate-y-180' : ''
             }`}
             style={{
