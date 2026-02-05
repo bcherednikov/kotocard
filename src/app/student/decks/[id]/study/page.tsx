@@ -10,6 +10,7 @@ type Card = {
   id: string;
   ru_text: string;
   en_text: string;
+  ru_transcription: string | null;
   audio_url: string | null;
 };
 
@@ -168,6 +169,14 @@ export default function StudyPage() {
   const backText = direction === 'ru_to_en' ? currentCard.en_text : currentCard.ru_text;
   const frontFlag = direction === 'ru_to_en' ? '🇷🇺' : '🇬🇧';
   const backFlag = direction === 'ru_to_en' ? '🇬🇧' : '🇷🇺';
+  
+  // Показывать транскрипцию если:
+  // 1. У профиля включена опция
+  // 2. На обратной стороне показывается английское слово
+  // 3. У карточки есть транскрипция
+  const showTranscription = profile?.show_russian_transcription && 
+                           direction === 'ru_to_en' && 
+                           currentCard.ru_transcription;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 py-8 px-4">
@@ -247,9 +256,14 @@ export default function StudyPage() {
               <div className="bg-gradient-to-br from-green-500 to-blue-600 rounded-2xl shadow-2xl p-12">
                 <div className="text-center text-white">
                   <div className="text-6xl mb-6">{backFlag}</div>
-                  <p className="text-5xl font-bold mb-8">
+                  <p className="text-5xl font-bold mb-4">
                     {backText}
                   </p>
+                  {showTranscription && (
+                    <p className="text-3xl text-yellow-200 mb-6 font-medium">
+                      📖 {currentCard.ru_transcription}
+                    </p>
+                  )}
                   <div className="text-2xl text-green-100 mb-4">
                     {frontFlag} {frontText}
                   </div>

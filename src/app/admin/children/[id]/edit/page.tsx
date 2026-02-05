@@ -16,6 +16,7 @@ export default function EditChildPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showRussianTranscription, setShowRussianTranscription] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -58,6 +59,7 @@ export default function EditChildPage() {
 
       setName(child.display_name);
       setEmail(child.email);
+      setShowRussianTranscription(child.show_russian_transcription || false);
     } catch (err) {
       console.error('Ошибка загрузки ребёнка:', err);
       setError('Не удалось загрузить данные');
@@ -93,6 +95,7 @@ export default function EditChildPage() {
           name,
           email,
           password: password || undefined, // Отправить только если заполнен
+          showRussianTranscription,
           parentToken: session.access_token
         })
       });
@@ -199,6 +202,28 @@ export default function EditChildPage() {
               <p className="mt-1 text-xs text-gray-700">
                 Минимум 6 символов. Оставьте пустым если не хотите менять пароль.
               </p>
+            </div>
+
+            {/* Русская транскрипция */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <input
+                  id="show_transcription"
+                  type="checkbox"
+                  checked={showRussianTranscription}
+                  onChange={(e) => setShowRussianTranscription(e.target.checked)}
+                  className="mt-1 w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  disabled={saving}
+                />
+                <label htmlFor="show_transcription" className="ml-3 flex-1">
+                  <span className="block text-sm font-medium text-gray-900">
+                    📖 Показывать русскую транскрипцию
+                  </span>
+                  <span className="block text-xs text-gray-700 mt-1">
+                    При обучении под английскими словами будет показана русская транскрипция (например: apple → эпл, one → уан)
+                  </span>
+                </label>
+              </div>
             </div>
 
             {/* Ошибка */}

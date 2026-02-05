@@ -15,7 +15,7 @@ const supabaseAdmin = createClient(
 
 export async function POST(request: Request) {
   try {
-    const { childId, name, email, password, parentToken } = await request.json();
+    const { childId, name, email, password, showRussianTranscription, parentToken } = await request.json();
 
     console.log('🔐 API: Обновление ребёнка:', childId);
 
@@ -32,11 +32,12 @@ export async function POST(request: Request) {
 
     console.log('✅ API: Родитель подтверждён:', parentUser.email);
 
-    // 1. Обновить display_name в profiles
+    // 1. Обновить display_name и настройки в profiles
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .update({
         display_name: name,
+        show_russian_transcription: showRussianTranscription,
         updated_at: new Date().toISOString()
       })
       .eq('id', childId);

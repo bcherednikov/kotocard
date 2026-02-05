@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     // Загрузить детей из profiles
     let query = supabaseAdmin
       .from('profiles')
-      .select('id, display_name, created_at')
+      .select('id, display_name, created_at, show_russian_transcription')
       .eq('family_id', familyId)
       .eq('role', 'student');
 
@@ -58,7 +58,8 @@ export async function POST(request: Request) {
           display_name: profile.display_name,
           created_at: profile.created_at,
           email: user?.email || '',
-          last_sign_in_at: user?.last_sign_in_at || null
+          last_sign_in_at: user?.last_sign_in_at || null,
+          show_russian_transcription: profile.show_russian_transcription || false
         };
       })
     );

@@ -13,6 +13,7 @@ export default function NewCardPage() {
   const [deckName, setDeckName] = useState('');
   const [ruText, setRuText] = useState('');
   const [enText, setEnText] = useState('');
+  const [ruTranscription, setRuTranscription] = useState('');
   const [audioUrl, setAudioUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -74,6 +75,7 @@ export default function NewCardPage() {
           deck_id: deckId,
           ru_text: ruText,
           en_text: enText,
+          ru_transcription: ruTranscription || null,
           audio_url: audioUrl || null,
           position: nextPosition
         })
@@ -155,6 +157,25 @@ export default function NewCardPage() {
                 required
                 disabled={loading}
               />
+            </div>
+
+            {/* Русская транскрипция */}
+            <div>
+              <label htmlFor="ruTranscription" className="block text-sm font-medium text-gray-900 mb-2">
+                📖 Русская транскрипция (необязательно)
+              </label>
+              <input
+                id="ruTranscription"
+                type="text"
+                value={ruTranscription}
+                onChange={(e) => setRuTranscription(e.target.value)}
+                placeholder="Например: эпл"
+                className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-gray-900 placeholder:text-gray-500"
+                disabled={loading}
+              />
+              <p className="mt-1 text-xs text-gray-700">
+                Фонетическая транскрипция русскими буквами для детей с трудностями в чтении
+              </p>
             </div>
 
             {/* Audio URL */}

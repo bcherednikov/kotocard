@@ -10,6 +10,7 @@ type Profile = {
   role: 'admin' | 'student';
   family_id: string;
   avatar_url?: string;
+  show_russian_transcription?: boolean;
 };
 
 type AuthContextType = {

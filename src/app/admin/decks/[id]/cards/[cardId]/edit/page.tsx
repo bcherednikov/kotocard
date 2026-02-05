@@ -12,6 +12,7 @@ export default function EditCardPage() {
   const { profile } = useAuth();
   const [ruText, setRuText] = useState('');
   const [enText, setEnText] = useState('');
+  const [ruTranscription, setRuTranscription] = useState('');
   const [audioUrl, setAudioUrl] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -36,6 +37,7 @@ export default function EditCardPage() {
 
       setRuText(data.ru_text);
       setEnText(data.en_text);
+      setRuTranscription(data.ru_transcription || '');
       setAudioUrl(data.audio_url || '');
     } catch (err) {
       console.error('Ошибка загрузки карточки:', err);
@@ -58,6 +60,7 @@ export default function EditCardPage() {
         .update({
           ru_text: ruText,
           en_text: enText,
+          ru_transcription: ruTranscription || null,
           audio_url: audioUrl || null,
           updated_at: new Date().toISOString()
         })
@@ -141,6 +144,25 @@ export default function EditCardPage() {
                 required
                 disabled={saving}
               />
+            </div>
+
+            {/* Русская транскрипция */}
+            <div>
+              <label htmlFor="ruTranscription" className="block text-sm font-medium text-gray-900 mb-2">
+                📖 Русская транскрипция (необязательно)
+              </label>
+              <input
+                id="ruTranscription"
+                type="text"
+                value={ruTranscription}
+                onChange={(e) => setRuTranscription(e.target.value)}
+                placeholder="Например: эпл"
+                className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-gray-900 placeholder:text-gray-500"
+                disabled={saving}
+              />
+              <p className="mt-1 text-xs text-gray-700">
+                Фонетическая транскрипция русскими буквами для детей с трудностями в чтении
+              </p>
             </div>
 
             {/* Audio URL */}
