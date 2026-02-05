@@ -214,28 +214,15 @@ export default function ReviewPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 py-8 px-4">
       <div className="max-w-2xl mx-auto">
-        {/* Заголовок */}
-        <div className="bg-white rounded-xl shadow-lg p-4 mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="text-3xl">🔄</div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Режим повторения</h1>
-                <p className="text-sm text-gray-600">Карточки из всех изученных наборов</p>
-              </div>
-            </div>
-            <Link
-              href="/student/decks"
-              className="px-4 py-2 bg-white border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
-            >
-              Выход
-            </Link>
-          </div>
-        </div>
-
         {/* Прогресс */}
         <div className="flex justify-between items-center mb-6">
-          <div className="text-lg font-semibold text-gray-800">
+          <Link
+            href="/student/decks"
+            className="px-4 py-2 bg-white rounded-lg shadow text-gray-700 hover:bg-gray-50 font-medium"
+          >
+            ← Выход
+          </Link>
+          <div className="text-sm font-medium text-gray-700">
             Карточка {currentIndex + 1} из {cards.length}
           </div>
           <div className="flex gap-2">
