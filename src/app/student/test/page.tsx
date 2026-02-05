@@ -29,38 +29,55 @@ export default function TestModesPage() {
         </div>
 
         {/* Режимы тестов */}
-        <div className="grid md:grid-cols-1 gap-6 max-w-2xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
           {/* Случайный микс */}
           <Link
             href="/student/test/random-mix"
-            className="block bg-white rounded-2xl shadow-lg p-8 hover:shadow-xl transition-all hover:scale-105"
+            className="block bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg p-8 hover:shadow-xl transition-all hover:scale-105"
           >
-            <div className="flex items-start gap-6">
-              <div className="text-5xl">🎲</div>
-              <div className="flex-1">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Случайный микс
-                </h2>
-                <p className="text-gray-700 mb-4">
-                  10 случайных вопросов из всех изученных слов. 
-                  Разные типы заданий: выбор варианта, диктант, аудио.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
-                    📝 Текст
-                  </span>
-                  <span className="px-3 py-1 bg-purple-100 text-purple-800 text-sm rounded-full">
-                    🔊 Аудио
-                  </span>
-                  <span className="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full">
-                    ✍️ Диктант
-                  </span>
-                  <span className="px-3 py-1 bg-orange-100 text-orange-800 text-sm rounded-full">
-                    ✅ Выбор
-                  </span>
-                </div>
+            <div className="text-white">
+              <div className="text-5xl mb-4">🎲</div>
+              <h2 className="text-2xl font-bold mb-3">
+                Случайный микс
+              </h2>
+              <p className="text-purple-100 mb-4">
+                10 случайных вопросов из всех изученных слов
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <span className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-sm rounded-full">
+                  📝 Текст
+                </span>
+                <span className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-sm rounded-full">
+                  🔊 Аудио
+                </span>
+                <span className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-sm rounded-full">
+                  ✍️ Диктант
+                </span>
               </div>
-              <div className="text-3xl text-gray-400">→</div>
+            </div>
+          </Link>
+
+          {/* По теме */}
+          <Link
+            href="/student/test/by-deck"
+            className="block bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl shadow-lg p-8 hover:shadow-xl transition-all hover:scale-105"
+          >
+            <div className="text-white">
+              <div className="text-5xl mb-4">📚</div>
+              <h2 className="text-2xl font-bold mb-3">
+                По теме
+              </h2>
+              <p className="text-blue-100 mb-4">
+                Выбери набор и проверь знания по конкретной теме
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <span className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-sm rounded-full">
+                  🎯 Целевая проверка
+                </span>
+                <span className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-sm rounded-full">
+                  📖 По набору
+                </span>
+              </div>
             </div>
           </Link>
 
