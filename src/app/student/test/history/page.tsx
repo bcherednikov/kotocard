@@ -15,29 +15,68 @@ type TestSession = {
   completed_at: string | null;
 };
 
+type Period = 'all' | 'week' | 'day';
+
 export default function TestHistoryPage() {
   const { user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [sessions, setSessions] = useState<TestSession[]>([]);
+  const [studiedCardsCount, setStudiedCardsCount] = useState(0);
+  const [period, setPeriod] = useState<Period>('all');
 
   useEffect(() => {
     if (user) {
       loadHistory();
     }
-  }, [user]);
+  }, [user, period]);
 
   async function loadHistory() {
     try {
-      const { data, error } = await supabase
+      setLoading(true);
+      
+      // Определить временные рамки
+      const now = new Date();
+      let dateFilter: Date | null = null;
+      
+      if (period === 'day') {
+        dateFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      } else if (period === 'week') {
+        dateFilter = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      }
+
+      // Загрузить тесты
+      let testsQuery = supabase
         .from('test_sessions')
         .select('*')
         .eq('user_id', user!.id)
-        .not('completed_at', 'is', null)
-        .order('completed_at', { ascending: false });
+        .not('completed_at', 'is', null);
+      
+      if (dateFilter) {
+        testsQuery = testsQuery.gte('completed_at', dateFilter.toISOString());
+      }
+      
+      const { data: testsData, error: testsError } = await testsQuery.order('completed_at', { ascending: false });
+      if (testsError) throw testsError;
+      setSessions(testsData || []);
 
-      if (error) throw error;
+      // Загрузить изученные карточки
+      let cardsQuery = supabase
+        .from('card_progress')
+        .select('card_id')
+        .eq('user_id', user!.id)
+        .gt('times_shown', 0);
+      
+      if (dateFilter) {
+        cardsQuery = cardsQuery.gte('last_reviewed_at', dateFilter.toISOString());
+      }
+      
+      const { data: cardsData, error: cardsError } = await cardsQuery;
+      if (cardsError) throw cardsError;
+      
+      // Подсчитать уникальные карточки
+      const uniqueCards = new Set(cardsData?.map(c => c.card_id) || []);
+      setStudiedCardsCount(uniqueCards.size);
 
-      setSessions(data || []);
     } catch (err) {
       console.error('Ошибка загрузки истории:', err);
     } finally {
@@ -58,6 +97,12 @@ export default function TestHistoryPage() {
   const totalQuestions = sessions.reduce((sum, s) => sum + s.total_questions, 0);
   const averageScore = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
 
+  const periodLabels = {
+    all: 'За всё время',
+    week: 'За неделю',
+    day: 'За день'
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 py-8 px-4">
       <div className="max-w-5xl mx-auto">
@@ -68,7 +113,7 @@ export default function TestHistoryPage() {
               📊 Твои результаты
             </h1>
             <p className="text-gray-700">
-              История всех пройденных проверок
+              Статистика обучения и проверок
             </p>
           </div>
           <Link
@@ -79,8 +124,31 @@ export default function TestHistoryPage() {
           </Link>
         </div>
 
+        {/* Вкладки периодов */}
+        <div className="flex gap-2 mb-6">
+          {(['all', 'week', 'day'] as Period[]).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={`px-6 py-3 rounded-xl font-semibold transition ${
+                period === p
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg'
+                  : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              {periodLabels[p]}
+            </button>
+          ))}
+        </div>
+
         {/* Общая статистика */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
+        <div className="grid md:grid-cols-5 gap-6 mb-8">
+          {/* Изученные карточки - НОВОЕ */}
+          <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg p-6 text-center text-white">
+            <div className="text-4xl mb-2">📚</div>
+            <div className="text-3xl font-bold">{studiedCardsCount}</div>
+            <div className="text-blue-100 text-sm">Изучено слов</div>
+          </div>
           <div className="bg-white rounded-2xl shadow-lg p-6 text-center">
             <div className="text-4xl mb-2">🎯</div>
             <div className="text-3xl font-bold text-purple-600">{totalTests}</div>
