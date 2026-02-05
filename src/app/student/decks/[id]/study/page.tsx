@@ -139,6 +139,25 @@ export default function StudyPage() {
     setIsFlipped(!isFlipped);
   }
 
+  function speakText(text: string, lang: 'en' | 'ru') {
+    // Проверить поддержку Web Speech API
+    if (!('speechSynthesis' in window)) {
+      alert('Ваш браузер не поддерживает озвучку');
+      return;
+    }
+
+    // Остановить предыдущую озвучку если есть
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = lang === 'en' ? 'en-US' : 'ru-RU';
+    utterance.rate = 0.9; // Немного медленнее для лучшего понимания
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+
+    window.speechSynthesis.speak(utterance);
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -236,9 +255,21 @@ export default function StudyPage() {
               <div className="bg-white rounded-2xl shadow-2xl p-12 h-full flex flex-col justify-center">
                 <div className="text-center">
                   <div className="text-6xl mb-6">{frontFlag}</div>
-                  <p className="text-5xl font-bold text-gray-900 mb-3">
-                    {frontText}
-                  </p>
+                  <div className="flex items-center justify-center gap-4 mb-3">
+                    <p className="text-5xl font-bold text-gray-900">
+                      {frontText}
+                    </p>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        speakText(frontText, direction === 'ru_to_en' ? 'ru' : 'en');
+                      }}
+                      className="text-4xl hover:scale-110 transition-transform active:scale-95"
+                      title="Прослушать"
+                    >
+                      🔊
+                    </button>
+                  </div>
                   {showTranscriptionOnFront && (
                     <p className="text-xl text-blue-600 mb-8 italic">
                       [{currentCard.ru_transcription}]
@@ -262,9 +293,21 @@ export default function StudyPage() {
               <div className="bg-gradient-to-br from-green-500 to-blue-600 rounded-2xl shadow-2xl p-12 h-full flex flex-col justify-center">
                 <div className="text-center text-white">
                   <div className="text-6xl mb-6">{backFlag}</div>
-                  <p className="text-5xl font-bold mb-3">
-                    {backText}
-                  </p>
+                  <div className="flex items-center justify-center gap-4 mb-3">
+                    <p className="text-5xl font-bold">
+                      {backText}
+                    </p>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        speakText(backText, direction === 'ru_to_en' ? 'en' : 'ru');
+                      }}
+                      className="text-4xl hover:scale-110 transition-transform active:scale-95"
+                      title="Прослушать"
+                    >
+                      🔊
+                    </button>
+                  </div>
                   {showTranscriptionOnBack && (
                     <p className="text-xl text-yellow-200 mb-8 italic">
                       [{currentCard.ru_transcription}]
@@ -272,9 +315,21 @@ export default function StudyPage() {
                   )}
                   <div className="mt-8 pt-6 border-t-2 border-white/30">
                     <p className="text-sm text-green-100 mb-2">Перевод:</p>
-                    <p className="text-2xl text-white font-medium">
-                      {frontFlag} {frontText}
-                    </p>
+                    <div className="flex items-center justify-center gap-3">
+                      <p className="text-2xl text-white font-medium">
+                        {frontFlag} {frontText}
+                      </p>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          speakText(frontText, direction === 'ru_to_en' ? 'ru' : 'en');
+                        }}
+                        className="text-2xl hover:scale-110 transition-transform active:scale-95"
+                        title="Прослушать перевод"
+                      >
+                        🔊
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
