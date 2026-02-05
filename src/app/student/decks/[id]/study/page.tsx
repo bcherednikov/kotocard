@@ -216,7 +216,7 @@ export default function StudyPage() {
         {/* Карточка */}
         <div 
           className={`relative mb-8 ${!isFlipped ? 'cursor-pointer' : ''}`}
-          style={{ perspective: '1000px', minHeight: '400px' }}
+          style={{ perspective: '1000px', height: '400px' }}
           onClick={!isFlipped ? handleFlip : undefined}
         >
           <div 
@@ -230,24 +230,21 @@ export default function StudyPage() {
           >
             {/* Передняя сторона */}
             <div 
-              className="absolute w-full backface-hidden"
+              className="absolute w-full h-full backface-hidden"
               style={{ backfaceVisibility: 'hidden' }}
             >
-              <div className="bg-white rounded-2xl shadow-2xl p-12">
+              <div className="bg-white rounded-2xl shadow-2xl p-12 h-full flex flex-col justify-center">
                 <div className="text-center">
                   <div className="text-6xl mb-6">{frontFlag}</div>
-                  <p className="text-5xl font-bold text-gray-900 mb-8">
+                  <p className="text-5xl font-bold text-gray-900 mb-3">
                     {frontText}
                   </p>
                   {showTranscriptionOnFront && (
-                    <div className="mb-8 p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
-                      <p className="text-sm text-blue-700 mb-2 font-semibold">Произношение:</p>
-                      <p className="text-3xl text-blue-900 font-medium">
-                        {currentCard.ru_transcription}
-                      </p>
-                    </div>
+                    <p className="text-xl text-blue-600 mb-8 italic">
+                      [{currentCard.ru_transcription}]
+                    </p>
                   )}
-                  <p className="text-gray-600 text-lg">
+                  <p className="text-gray-600 text-lg mt-8">
                     👆 Нажми чтобы увидеть ответ
                   </p>
                 </div>
@@ -256,25 +253,22 @@ export default function StudyPage() {
 
             {/* Задняя сторона */}
             <div 
-              className="absolute w-full backface-hidden"
+              className="absolute w-full h-full backface-hidden"
               style={{ 
                 backfaceVisibility: 'hidden',
                 transform: 'rotateY(180deg)'
               }}
             >
-              <div className="bg-gradient-to-br from-green-500 to-blue-600 rounded-2xl shadow-2xl p-12">
+              <div className="bg-gradient-to-br from-green-500 to-blue-600 rounded-2xl shadow-2xl p-12 h-full flex flex-col justify-center">
                 <div className="text-center text-white">
                   <div className="text-6xl mb-6">{backFlag}</div>
-                  <p className="text-5xl font-bold mb-6">
+                  <p className="text-5xl font-bold mb-3">
                     {backText}
                   </p>
                   {showTranscriptionOnBack && (
-                    <div className="mb-6 p-4 bg-white/20 rounded-lg border-2 border-white/40">
-                      <p className="text-sm text-yellow-100 mb-2 font-semibold">Произношение:</p>
-                      <p className="text-3xl text-yellow-200 font-medium">
-                        {currentCard.ru_transcription}
-                      </p>
-                    </div>
+                    <p className="text-xl text-yellow-200 mb-8 italic">
+                      [{currentCard.ru_transcription}]
+                    </p>
                   )}
                   <div className="mt-8 pt-6 border-t-2 border-white/30">
                     <p className="text-sm text-green-100 mb-2">Перевод:</p>
