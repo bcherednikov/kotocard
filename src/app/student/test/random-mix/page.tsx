@@ -124,20 +124,17 @@ export default function RandomMixTestPage() {
     const displayTypes: QuestionDisplay[] = ['text_en', 'text_ru', 'audio_en', 'audio_ru'];
     const display = displayTypes[Math.floor(Math.random() * displayTypes.length)];
 
-    // Случайный тип ответа
-    const answerModes: AnswerMode[] = [
-      'choice_text_en', 'choice_text_ru', 'choice_audio_en', 
-      'input_en', 'input_ru'
-    ];
-    const answerMode = answerModes[Math.floor(Math.random() * answerModes.length)];
+    // Определить язык вопроса и ответа (всегда противоположные!)
+    const questionIsEnglish = display.includes('_en');
+    const answerLang = questionIsEnglish ? '_ru' : '_en';
+
+    // Случайный тип ответа (но на ПРОТИВОПОЛОЖНОМ языке)
+    const answerTypes = ['choice_text', 'choice_audio', 'input'];
+    const answerType = answerTypes[Math.floor(Math.random() * answerTypes.length)];
+    const answerMode = (answerType + answerLang) as AnswerMode;
 
     // Определить правильный ответ
-    let correctAnswer = '';
-    if (answerMode.includes('_en')) {
-      correctAnswer = card.en_text;
-    } else {
-      correctAnswer = card.ru_text;
-    }
+    const correctAnswer = questionIsEnglish ? card.ru_text : card.en_text;
 
     // Если multiple choice - добавить неправильные варианты
     let options: Card[] | undefined;
