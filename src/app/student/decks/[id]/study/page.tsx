@@ -170,13 +170,14 @@ export default function StudyPage() {
   const frontFlag = direction === 'ru_to_en' ? '🇷🇺' : '🇬🇧';
   const backFlag = direction === 'ru_to_en' ? '🇬🇧' : '🇷🇺';
   
-  // Показывать транскрипцию если:
-  // 1. У профиля включена опция
-  // 2. На обратной стороне показывается английское слово
-  // 3. У карточки есть транскрипция
-  const showTranscription = profile?.show_russian_transcription && 
-                           direction === 'ru_to_en' && 
-                           currentCard.ru_transcription;
+  // Показывать транскрипцию везде где показывается английское слово
+  const showTranscriptionOnFront = profile?.show_russian_transcription && 
+                                   direction === 'en_to_ru' && 
+                                   currentCard.ru_transcription;
+  
+  const showTranscriptionOnBack = profile?.show_russian_transcription && 
+                                  direction === 'ru_to_en' && 
+                                  currentCard.ru_transcription;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 py-8 px-4">
@@ -235,9 +236,14 @@ export default function StudyPage() {
               <div className="bg-white rounded-2xl shadow-2xl p-12">
                 <div className="text-center">
                   <div className="text-6xl mb-6">{frontFlag}</div>
-                  <p className="text-5xl font-bold text-gray-900 mb-8">
+                  <p className="text-5xl font-bold text-gray-900 mb-4">
                     {frontText}
                   </p>
+                  {showTranscriptionOnFront && (
+                    <p className="text-3xl text-blue-600 mb-6 font-medium">
+                      📖 {currentCard.ru_transcription}
+                    </p>
+                  )}
                   <p className="text-gray-600 text-lg">
                     👆 Нажми чтобы увидеть ответ
                   </p>
@@ -259,7 +265,7 @@ export default function StudyPage() {
                   <p className="text-5xl font-bold mb-4">
                     {backText}
                   </p>
-                  {showTranscription && (
+                  {showTranscriptionOnBack && (
                     <p className="text-3xl text-yellow-200 mb-6 font-medium">
                       📖 {currentCard.ru_transcription}
                     </p>
