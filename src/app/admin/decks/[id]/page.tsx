@@ -166,13 +166,21 @@ export default function DeckDetailPage() {
                 <p className="text-gray-700">{deck.description}</p>
               )}
             </div>
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition disabled:opacity-50"
-            >
-              {deleting ? 'Удаление...' : 'Удалить'}
-            </button>
+            <div className="flex items-center gap-2">
+              <Link
+                href={`/admin/decks/${deckId}/edit`}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition"
+              >
+                Изменить
+              </Link>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition disabled:opacity-50"
+              >
+                {deleting ? 'Удаление...' : 'Удалить'}
+              </button>
+            </div>
           </div>
 
           {deck.tags && deck.tags.length > 0 && (

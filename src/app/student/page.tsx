@@ -94,29 +94,41 @@ export default function StudentDashboardPage() {
   async function loadStats() {
     if (!profile) return;
 
-    // Загрузить статистику тестов
-    const { data: testSessions } = await supabase
+    // Статистика тестов (как в /student/test/history, период "за всё время")
+    const { data: testsData, error: testsError } = await supabase
       .from('test_sessions')
       .select('*')
-      .eq('user_id', profile.id);
+      .eq('user_id', profile.id)
+      .not('completed_at', 'is', null);
 
-    // Загрузить количество изученных карточек
-    const { count: studiedCards } = await supabase
-      .from('card_progress')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', profile.id);
+    if (testsError) {
+      throw testsError;
+    }
 
-    const totalTests = testSessions?.length || 0;
-    const correctAnswers = testSessions?.reduce((sum, s) => sum + s.correct_answers, 0) || 0;
-    const totalQuestions = testSessions?.reduce((sum, s) => sum + s.total_questions, 0) || 0;
+    const totalTests = testsData?.length || 0;
+    const correctAnswers = testsData?.reduce((sum, s) => sum + s.correct_answers, 0) || 0;
+    const totalQuestions = testsData?.reduce((sum, s) => sum + s.total_questions, 0) || 0;
     const averageScore = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
+
+    // Количество изученных карточек (как в истории)
+    const { data: cardsData, error: cardsError } = await supabase
+      .from('card_progress')
+      .select('card_id')
+      .eq('user_id', profile.id)
+      .gt('times_shown', 0);
+
+    if (cardsError) {
+      throw cardsError;
+    }
+
+    const uniqueCards = new Set(cardsData?.map(c => c.card_id) || []);
 
     setStats({
       totalTests,
       correctAnswers,
       totalQuestions,
       averageScore,
-      studiedCards: studiedCards || 0
+      studiedCards: uniqueCards.size
     });
   }
 

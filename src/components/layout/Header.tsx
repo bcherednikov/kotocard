@@ -54,6 +54,12 @@ export function Header() {
     setIsMobileMenuOpen(false);
   }
 
+  const logoHref = !user
+    ? '/'
+    : profile?.role === 'admin'
+      ? '/admin/decks'
+      : '/student';
+
   return (
     <>
       {/* Overlay для мобильного меню */}
@@ -69,7 +75,7 @@ export function Header() {
         <div className="flex items-center justify-between">
           {/* Логотип */}
           <Link 
-            href="/" 
+            href={logoHref}
             className="flex items-center gap-3 hover:opacity-80 transition"
             onClick={closeMobileMenu}
           >
@@ -108,6 +114,12 @@ export function Header() {
                       className="text-gray-700 hover:text-gray-900 transition font-medium"
                     >
                       Дети
+                    </Link>
+                    <Link 
+                      href="/admin/stats" 
+                      className="text-gray-700 hover:text-gray-900 transition font-medium"
+                    >
+                      📊 Результаты
                     </Link>
                   </>
                 )}
@@ -202,6 +214,13 @@ export function Header() {
                       onClick={closeMobileMenu}
                     >
                       👶 Дети
+                    </Link>
+                    <Link 
+                      href="/admin/stats" 
+                      className="block px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition font-medium"
+                      onClick={closeMobileMenu}
+                    >
+                      📊 Результаты
                     </Link>
                   </>
                 )}

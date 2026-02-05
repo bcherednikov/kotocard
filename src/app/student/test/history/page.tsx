@@ -211,14 +211,14 @@ export default function TestHistoryPage() {
                       'bg-orange-50 border-orange-200'
                     }`}
                   >
-                    <div className="flex items-center gap-6">
+                    <div className="flex flex-col md:flex-row md:items-center gap-6">
                       {/* Иконка */}
                       <div className="text-5xl">
                         {isPerfect ? '🏆' : isGood ? '🎉' : '💪'}
                       </div>
 
                       {/* Информация */}
-                      <div className="flex-1">
+                      <div className="flex-1 w-full">
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="text-xl font-bold text-gray-900">
                             Проверка #{totalTests - index}
@@ -249,7 +249,7 @@ export default function TestHistoryPage() {
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-6">
+                        <div className="flex flex-col md:flex-row md:items-center gap-4">
                           <div className="flex items-center gap-2">
                             <span className="text-2xl font-bold text-green-600">
                               {session.correct_count}
@@ -260,7 +260,7 @@ export default function TestHistoryPage() {
                             </span>
                           </div>
 
-                          <div className="flex-1 max-w-xs">
+                          <div className="flex-1 max-w-xs w-full">
                             <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
                               <div
                                 className={`h-full transition-all ${
@@ -280,12 +280,14 @@ export default function TestHistoryPage() {
                       </div>
 
                       {/* Кнопка просмотра */}
-                      <Link
-                        href={`/student/test/random-mix/complete?session=${session.id}`}
-                        className="px-6 py-3 bg-purple-500 text-white rounded-lg font-semibold hover:bg-purple-600 transition"
-                      >
-                        Подробнее
-                      </Link>
+                      <div className="w-full md:w-auto md:self-stretch flex md:items-center md:justify-end">
+                        <Link
+                          href={`/student/test/random-mix/complete?session=${session.id}`}
+                          className="w-full md:w-auto text-center px-6 py-3 bg-purple-500 text-white rounded-lg font-semibold hover:bg-purple-600 transition"
+                        >
+                          Подробнее
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 );

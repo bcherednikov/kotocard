@@ -156,35 +156,44 @@ export default function AdminDecksPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {decks.map((deck) => (
-              <Link
+              <div
                 key={deck.id}
-                href={`/admin/decks/${deck.id}`}
-                className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition"
+                className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition flex flex-col"
               >
-                <h3 className="text-xl font-bold text-gray-900 mb-2">
-                  {deck.name}
-                </h3>
-                {deck.description && (
-                  <p className="text-gray-700 text-sm mb-4 line-clamp-2">
-                    {deck.description}
-                  </p>
-                )}
-                {deck.tags && deck.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {deck.tags.map((tag, idx) => (
-                      <span
-                        key={idx}
-                        className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
-                      >
-                        {tag}
-                      </span>
-                    ))}
+                <Link href={`/admin/decks/${deck.id}`} className="flex-1 block">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">
+                    {deck.name}
+                  </h3>
+                  {deck.description && (
+                    <p className="text-gray-700 text-sm mb-4 line-clamp-2">
+                      {deck.description}
+                    </p>
+                  )}
+                  {deck.tags && deck.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {deck.tags.map((tag, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="text-sm text-gray-600">
+                    Создан: {new Date(deck.created_at).toLocaleDateString('ru-RU')}
                   </div>
-                )}
-                <div className="text-sm text-gray-600">
-                  Создан: {new Date(deck.created_at).toLocaleDateString('ru-RU')}
+                </Link>
+                <div className="mt-4 pt-4 border-t border-gray-100 flex justify-end">
+                  <Link
+                    href={`/admin/decks/${deck.id}/edit`}
+                    className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    Изменить
+                  </Link>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         )}

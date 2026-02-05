@@ -54,12 +54,7 @@ export default function SelectDeckForTestPage() {
             .from('card_progress')
             .select('card_id', { count: 'exact', head: true })
             .eq('user_id', profile.id)
-            .in('card_id', 
-              supabase
-                .from('cards')
-                .select('id')
-                .eq('deck_id', deck.id)
-            );
+            .gt('times_shown', 0);
 
           return {
             ...deck,
@@ -69,9 +64,8 @@ export default function SelectDeckForTestPage() {
         })
       );
 
-      // Фильтруем наборы - показываем только те, где есть изученные карточки
-      const availableDecks = decksWithStats.filter(d => d.studiedCardsCount > 0);
-      setDecks(availableDecks);
+      // Показываем все наборы, даже если в них пока нет изученных карточек
+      setDecks(decksWithStats);
     } catch (err) {
       console.error('Ошибка загрузки наборов:', err);
     } finally {
@@ -114,10 +108,10 @@ export default function SelectDeckForTestPage() {
           <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
             <div className="text-6xl mb-4">😔</div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Нет доступных наборов для теста
+              Нет доступных наборов
             </h2>
             <p className="text-gray-700 mb-6">
-              Сначала нужно изучить карточки хотя бы из одного набора
+              Попроси родителей создать для тебя хотя бы один набор карточек
             </p>
             <Link
               href="/student/decks"
@@ -207,8 +201,8 @@ export default function SelectDeckForTestPage() {
           <div className="mt-8 bg-blue-50 border border-blue-200 rounded-xl p-6">
             <h3 className="font-semibold text-blue-900 mb-3">💡 Подсказка:</h3>
             <ul className="space-y-2 text-blue-800 text-sm">
-              <li>✅ В тесте будут только те карточки, которые ты уже изучал</li>
-              <li>🎲 Тест состоит из 10 случайных вопросов из выбранного набора</li>
+              <li>✅ В тесте будут карточки только из выбранного набора</li>
+              <li>🎲 Тест состоит из 10 случайных вопросов (или меньше, если в наборе мало карточек)</li>
               <li>📊 Разные типы заданий: текст, аудио, диктант, выбор варианта</li>
               <li>🏆 Можешь пройти тест несколько раз для лучшего результата</li>
             </ul>
