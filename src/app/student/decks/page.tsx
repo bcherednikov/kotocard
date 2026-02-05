@@ -95,6 +95,34 @@ export default function StudentDecksPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Режим повторения - специальная карточка */}
+            <Link
+              href="/student/review/start"
+              className="bg-gradient-to-br from-orange-500 to-red-600 rounded-xl shadow-lg p-6 hover:shadow-2xl transition transform hover:scale-105 border-4 border-yellow-400"
+            >
+              <div className="text-white">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="text-3xl">🔄</div>
+                  <h3 className="text-2xl font-bold">
+                    Режим повторения
+                  </h3>
+                </div>
+                <p className="text-orange-100 text-sm mb-4">
+                  50 случайных карточек из всех твоих изученных наборов
+                </p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">🎲</span>
+                    <span className="text-lg font-semibold">
+                      Микс из всех наборов
+                    </span>
+                  </div>
+                  <div className="text-2xl">→</div>
+                </div>
+              </div>
+            </Link>
+
+            {/* Обычные наборы */}
             {decks.map((deck) => (
               <Link
                 key={deck.id}
