@@ -231,6 +231,28 @@ export default function RandomMixTestPage() {
     window.speechSynthesis.speak(utterance);
   }
 
+  function getInstruction(question: Question): string {
+    const { display, answerMode } = question;
+    const isAudioQuestion = display.startsWith('audio_');
+    const isChoice = answerMode.startsWith('choice_');
+    const isAudioChoice = answerMode === 'choice_audio_en';
+
+    if (isChoice) {
+      if (isAudioChoice) {
+        return '🔊 Прослушай варианты и выбери правильный перевод';
+      } else {
+        return '✅ Выбери правильный перевод';
+      }
+    } else {
+      // Input mode - диктант
+      if (isAudioQuestion) {
+        return '🎧 Прослушай и напиши перевод';
+      } else {
+        return '✍️ Напиши перевод';
+      }
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -372,8 +394,8 @@ export default function RandomMixTestPage() {
           </div>
         )}
 
-        <div className="mt-6 text-gray-600">
-          {question.answerMode.startsWith('choice_') ? 'Выбери правильный ответ' : 'Напиши перевод'}
+        <div className="mt-6 text-lg font-semibold text-gray-700">
+          {getInstruction(question)}
         </div>
       </div>
     );
