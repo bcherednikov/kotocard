@@ -62,13 +62,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }, PROFILE_LOAD_TIMEOUT);
       
       try {
-        if (IS_DEV) console.log('📋 AuthContext: Loading profile for user:', userId);
+        console.log('📋 AuthContext: Loading profile for user:', userId);
+        console.log('📋 AuthContext: Starting Supabase query...');
         
+        const startTime = Date.now();
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', userId)
           .single();
+        
+        const duration = Date.now() - startTime;
+        console.log(`📋 AuthContext: Query completed in ${duration}ms`);
         
         // Очистить таймаут при успехе
         if (loadTimeoutRef.current) {
@@ -76,10 +81,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           loadTimeoutRef.current = null;
         }
         
+        // ВСЕГДА логируем результат запроса
+        console.log('📋 AuthContext: Query result:', { data, error, hasData: !!data, hasError: !!error });
+        
         if (error) {
+          console.error('❌ AuthContext: Full error object:', JSON.stringify(error, null, 2));
+          
           // Игнорировать AbortError в dev режиме
           if (error.message?.includes('AbortError')) {
-            if (IS_DEV) console.log('⏭️ AuthContext: AbortError ignored');
+            console.log('⏭️ AuthContext: AbortError ignored');
             setLoading(false);
             isLoadingProfileRef.current = false;
             return;
@@ -87,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           
           // Если профиль не найден
           if (error.code === 'PGRST116' || error.message?.includes('no rows')) {
-            console.warn('⚠️ AuthContext: Profile not found');
+            console.warn('⚠️ AuthContext: Profile not found for user:', userId);
             setProfile(null);
             setLoading(false);
             isLoadingProfileRef.current = false;
@@ -96,20 +106,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           
           // Попробовать повторить один раз при других ошибках
           if (retryCount === 0) {
-            if (IS_DEV) console.warn('🔄 AuthContext: Retrying profile load...', error.message);
+            console.warn('🔄 AuthContext: Retrying profile load...', error.message);
             isLoadingProfileRef.current = false;
             await new Promise(resolve => setTimeout(resolve, 500));
             return loadProfile(userId, 1);
           }
           
-          console.error('❌ AuthContext: Profile error:', error.message);
+          console.error('❌ AuthContext: Profile error after retry:', error.message);
         }
         
         if (data) {
-          if (IS_DEV) console.log('✅ AuthContext: Profile loaded:', data.display_name, data.role);
+          console.log('✅ AuthContext: Profile loaded:', data.display_name, data.role);
           setProfile(data);
+        } else if (!error) {
+          console.warn('⚠️ AuthContext: No data and no error - unexpected state');
         }
       } catch (err: any) {
+        console.error('❌ AuthContext: Exception caught:', err);
+        console.error('❌ AuthContext: Exception details:', JSON.stringify(err, null, 2));
+        
         // Очистить таймаут при ошибке
         if (loadTimeoutRef.current) {
           clearTimeout(loadTimeoutRef.current);
@@ -120,6 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.error('❌ AuthContext: Load failed:', err.message);
         }
       } finally {
+        console.log('📋 AuthContext: Finally block - cleaning up');
         isLoadingProfileRef.current = false;
         setLoading(false);
       }

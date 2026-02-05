@@ -36,42 +36,57 @@ export default function LoginPage() {
       
       while (!profile && attempts < maxAttempts) {
         attempts++;
-        if (IS_DEV) console.log(`📋 Login: Loading profile (attempt ${attempts}/${maxAttempts})...`);
+        console.log(`📋 Login: Loading profile (attempt ${attempts}/${maxAttempts})...`);
+        console.log(`📋 Login: User ID: ${data.user.id}`);
         
         try {
+          const startTime = Date.now();
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('role')
             .eq('id', data.user.id)
             .single();
+          
+          const duration = Date.now() - startTime;
+          console.log(`📋 Login: Profile query took ${duration}ms`);
+          console.log(`📋 Login: Result:`, { hasData: !!profileData, hasError: !!profileError });
 
           if (profileError) {
+            console.error('❌ Login: Profile error:', JSON.stringify(profileError, null, 2));
+            
             // Игнорировать AbortError и повторить
             if (profileError.message?.includes('AbortError')) {
-              if (IS_DEV) console.log('⏭️ Login: AbortError, retrying...');
+              console.log('⏭️ Login: AbortError, retrying...');
               await new Promise(resolve => setTimeout(resolve, 500));
               continue;
             }
             
             // Если профиль не найден
             if (profileError.code === 'PGRST116' || profileError.message?.includes('no rows')) {
-              console.error('❌ Login: Profile not found');
-              router.push('/onboarding');
+              console.error('❌ Login: Profile not found for user:', data.user.id);
+              setError(`Профиль не найден. User ID: ${data.user.id}. Обратитесь к администратору.`);
+              setLoading(false);
               return;
             }
             
             // Другая ошибка
-            throw profileError;
+            if (attempts >= maxAttempts) {
+              throw profileError;
+            }
+            console.warn(`⚠️ Login: Retrying after error...`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            continue;
           }
 
           profile = profileData;
-          if (IS_DEV) console.log('✅ Login: Profile loaded:', profile.role);
+          console.log('✅ Login: Profile loaded:', profile.role);
         } catch (err: any) {
+          console.error(`❌ Login: Exception on attempt ${attempts}:`, err);
           if (attempts >= maxAttempts) {
             throw err;
           }
-          if (IS_DEV) console.warn(`⚠️ Login: Error on attempt ${attempts}, retrying...`);
-          await new Promise(resolve => setTimeout(resolve, 500));
+          console.warn(`⚠️ Login: Retrying after exception...`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
 
