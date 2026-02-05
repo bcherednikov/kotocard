@@ -259,16 +259,19 @@ export default function StudyPage() {
                     <p className="text-5xl font-bold text-gray-900">
                       {frontText}
                     </p>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        speakText(frontText, direction === 'ru_to_en' ? 'ru' : 'en');
-                      }}
-                      className="text-4xl hover:scale-110 transition-transform active:scale-95"
-                      title="Прослушать"
-                    >
-                      🔊
-                    </button>
+                    {/* Озвучка только для английского */}
+                    {direction === 'en_to_ru' && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          speakText(frontText, 'en');
+                        }}
+                        className="text-4xl hover:scale-110 transition-transform active:scale-95"
+                        title="Прослушать"
+                      >
+                        🔊
+                      </button>
+                    )}
                   </div>
                   {showTranscriptionOnFront && (
                     <p className="text-xl text-blue-600 mb-8 italic">
@@ -297,16 +300,19 @@ export default function StudyPage() {
                     <p className="text-5xl font-bold">
                       {backText}
                     </p>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        speakText(backText, direction === 'ru_to_en' ? 'en' : 'ru');
-                      }}
-                      className="text-4xl hover:scale-110 transition-transform active:scale-95"
-                      title="Прослушать"
-                    >
-                      🔊
-                    </button>
+                    {/* Озвучка только для английского */}
+                    {direction === 'ru_to_en' && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          speakText(backText, 'en');
+                        }}
+                        className="text-4xl hover:scale-110 transition-transform active:scale-95"
+                        title="Прослушать"
+                      >
+                        🔊
+                      </button>
+                    )}
                   </div>
                   {showTranscriptionOnBack && (
                     <p className="text-xl text-yellow-200 mb-8 italic">
@@ -315,21 +321,9 @@ export default function StudyPage() {
                   )}
                   <div className="mt-8 pt-6 border-t-2 border-white/30">
                     <p className="text-sm text-green-100 mb-2">Перевод:</p>
-                    <div className="flex items-center justify-center gap-3">
-                      <p className="text-2xl text-white font-medium">
-                        {frontFlag} {frontText}
-                      </p>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          speakText(frontText, direction === 'ru_to_en' ? 'ru' : 'en');
-                        }}
-                        className="text-2xl hover:scale-110 transition-transform active:scale-95"
-                        title="Прослушать перевод"
-                      >
-                        🔊
-                      </button>
-                    </div>
+                    <p className="text-2xl text-white font-medium">
+                      {frontFlag} {frontText}
+                    </p>
                   </div>
                 </div>
               </div>
