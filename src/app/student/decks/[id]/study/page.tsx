@@ -28,6 +28,7 @@ export default function StudyPage() {
   const [cards, setCards] = useState<Card[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sessionStats, setSessionStats] = useState({
     correct: 0,
@@ -79,8 +80,15 @@ export default function StudyPage() {
 
     // Переход к следующей карточке
     if (currentIndex < cards.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-      setIsFlipped(false);
+      // Скрыть карточку перед переключением
+      setIsTransitioning(true);
+      
+      // Задержка 200ms для плавного перехода
+      setTimeout(() => {
+        setCurrentIndex(currentIndex + 1);
+        setIsFlipped(false);
+        setIsTransitioning(false);
+      }, 200);
     } else {
       // Сохранить все ответы батчем в конце сессии
       await saveAllProgress([...answers, { cardId: card.id, isCorrect }]);
@@ -234,8 +242,12 @@ export default function StudyPage() {
 
         {/* Карточка */}
         <div 
-          className={`relative mb-8 ${!isFlipped ? 'cursor-pointer' : ''}`}
-          style={{ perspective: '1000px', height: '400px' }}
+          className={`relative mb-8 ${!isFlipped ? 'cursor-pointer' : ''} transition-opacity duration-200`}
+          style={{ 
+            perspective: '1000px', 
+            height: '400px',
+            opacity: isTransitioning ? 0 : 1
+          }}
           onClick={!isFlipped ? handleFlip : undefined}
         >
           <div 
