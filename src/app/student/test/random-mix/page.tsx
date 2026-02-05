@@ -46,6 +46,7 @@ export default function RandomMixTestPage() {
   const [results, setResults] = useState<QuestionResult[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     if (user && profile) {
@@ -178,47 +179,55 @@ export default function RandomMixTestPage() {
   }
 
   async function handleNext() {
+    if (isProcessing) return; // Защита от двойного клика
+    setIsProcessing(true);
+
     const question = questions[currentQuestionIndex];
 
-    // Сохранить результат вопроса в БД
-    if (sessionId) {
-      await supabase.from('test_results').insert({
-        session_id: sessionId,
-        card_id: question.card.id,
-        question_display: question.display,
-        answer_mode: question.answerMode,
-        user_answer: userAnswer,
-        correct_answer: question.correctAnswer,
-        is_correct: isCorrect,
-        time_spent_ms: Date.now() - questionStartTime
-      });
-    }
-
-    // Следующий вопрос или завершение
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-      setShowFeedback(false);
-      setUserAnswer('');
-      setQuestionStartTime(Date.now());
-    } else {
-      // Завершить сессию
+    try {
+      // Сохранить результат вопроса в БД
       if (sessionId) {
-        const correctCount = results.filter(r => r.isCorrect).length + (isCorrect ? 1 : 0);
-        const incorrectCount = results.length + 1 - correctCount;
-
-        await supabase
-          .from('test_sessions')
-          .update({
-            correct_count: correctCount,
-            incorrect_count: incorrectCount,
-            completed_at: new Date().toISOString()
-          })
-          .eq('id', sessionId);
+        await supabase.from('test_results').insert({
+          session_id: sessionId,
+          card_id: question.card.id,
+          question_display: question.display,
+          answer_mode: question.answerMode,
+          user_answer: userAnswer,
+          correct_answer: question.correctAnswer,
+          is_correct: isCorrect,
+          time_spent_ms: Date.now() - questionStartTime
+        });
       }
 
-      // Редирект на результаты
-      const correctCount = results.filter(r => r.isCorrect).length + (isCorrect ? 1 : 0);
-      router.push(`/student/test/random-mix/complete?session=${sessionId}&correct=${correctCount}&total=${questions.length}`);
+      // Следующий вопрос или завершение
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex(currentQuestionIndex + 1);
+        setShowFeedback(false);
+        setUserAnswer('');
+        setQuestionStartTime(Date.now());
+        setIsProcessing(false);
+      } else {
+        // Завершить сессию
+        if (sessionId) {
+          const correctCount = results.filter(r => r.isCorrect).length + (isCorrect ? 1 : 0);
+          const incorrectCount = results.length + 1 - correctCount;
+
+          await supabase
+            .from('test_sessions')
+            .update({
+              correct_count: correctCount,
+              incorrect_count: incorrectCount,
+              completed_at: new Date().toISOString()
+            })
+            .eq('id', sessionId);
+        }
+
+        // Редирект на результаты (без параметров correct/total)
+        router.push(`/student/test/random-mix/complete?session=${sessionId}`);
+      }
+    } catch (err) {
+      console.error('Ошибка сохранения:', err);
+      setIsProcessing(false);
     }
   }
 
@@ -339,9 +348,11 @@ export default function RandomMixTestPage() {
             </div>
             <button
               onClick={handleNext}
-              className="w-full py-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl font-bold text-xl hover:from-purple-600 hover:to-pink-700 transition shadow-lg"
+              disabled={isProcessing}
+              className="w-full py-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl font-bold text-xl hover:from-purple-600 hover:to-pink-700 transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {currentQuestionIndex < questions.length - 1 ? 'Следующий вопрос →' : 'Завершить тест 🏁'}
+              {isProcessing ? 'Сохраняем...' : 
+               currentQuestionIndex < questions.length - 1 ? 'Следующий вопрос →' : 'Завершить тест 🏁'}
             </button>
           </div>
         )}

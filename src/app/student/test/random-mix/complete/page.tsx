@@ -24,8 +24,6 @@ export default function TestCompletePage() {
   const { user } = useAuth();
 
   const sessionId = searchParams.get('session');
-  const correct = parseInt(searchParams.get('correct') || '0');
-  const total = parseInt(searchParams.get('total') || '10');
 
   const [loading, setLoading] = useState(true);
   const [results, setResults] = useState<TestResult[]>([]);
@@ -57,8 +55,11 @@ export default function TestCompletePage() {
     }
   }
 
-  const percentage = Math.round((correct / total) * 100);
-  const isPerfect = correct === total;
+  // Считаем из реальных результатов, не из URL
+  const correct = results.filter(r => r.is_correct).length;
+  const total = results.length;
+  const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
+  const isPerfect = correct === total && total > 0;
   const isGood = percentage >= 70;
 
   if (loading) {
