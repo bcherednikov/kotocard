@@ -58,6 +58,12 @@ export function Header() {
                     >
                       🎯 Проверка
                     </Link>
+                    <Link 
+                      href="/student/test/history" 
+                      className="text-gray-700 hover:text-gray-900 transition font-medium"
+                    >
+                      📊 Результаты
+                    </Link>
                   </>
                 )}
                 

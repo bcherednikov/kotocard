@@ -29,26 +29,7 @@ export default function TestModesPage() {
         </div>
 
         {/* Режимы тестов */}
-        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-          {/* История результатов */}
-          <Link
-            href="/student/test/history"
-            className="block bg-gradient-to-br from-green-500 to-blue-600 rounded-2xl shadow-lg p-8 hover:shadow-xl transition-all hover:scale-105"
-          >
-            <div className="flex items-start gap-6">
-              <div className="text-5xl">📊</div>
-              <div className="flex-1 text-white">
-                <h2 className="text-2xl font-bold mb-2">
-                  Твои результаты
-                </h2>
-                <p className="mb-4 text-green-50">
-                  История всех пройденных проверок, статистика и прогресс
-                </p>
-                <div className="text-3xl">→</div>
-              </div>
-            </div>
-          </Link>
-
+        <div className="grid md:grid-cols-1 gap-6 max-w-2xl mx-auto">
           {/* Случайный микс */}
           <Link
             href="/student/test/random-mix"
