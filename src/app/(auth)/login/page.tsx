@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
+const IS_DEV = process.env.NODE_ENV === 'development';
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -18,49 +20,75 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      if (IS_DEV) console.log('🔐 Login: Attempting sign in...');
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password
       });
 
       if (signInError) throw signInError;
+      if (IS_DEV) console.log('✅ Login: Sign in successful');
 
-      // Получить роль пользователя из profiles
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', data.user.id)
-        .single();
+      // Получить роль пользователя из profiles с повтором
+      let profile = null;
+      let attempts = 0;
+      const maxAttempts = 3;
+      
+      while (!profile && attempts < maxAttempts) {
+        attempts++;
+        if (IS_DEV) console.log(`📋 Login: Loading profile (attempt ${attempts}/${maxAttempts})...`);
+        
+        try {
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', data.user.id)
+            .single();
 
-      if (profileError) {
-        // Игнорировать AbortError
-        if (profileError.message?.includes('AbortError')) {
-          console.log('⏭️ Login: AbortError ignored, retrying redirect...');
-          // Попробовать редирект по умолчанию
-          router.push('/admin/decks');
-          return;
+          if (profileError) {
+            // Игнорировать AbortError и повторить
+            if (profileError.message?.includes('AbortError')) {
+              if (IS_DEV) console.log('⏭️ Login: AbortError, retrying...');
+              await new Promise(resolve => setTimeout(resolve, 500));
+              continue;
+            }
+            
+            // Если профиль не найден
+            if (profileError.code === 'PGRST116' || profileError.message?.includes('no rows')) {
+              console.error('❌ Login: Profile not found');
+              router.push('/onboarding');
+              return;
+            }
+            
+            // Другая ошибка
+            throw profileError;
+          }
+
+          profile = profileData;
+          if (IS_DEV) console.log('✅ Login: Profile loaded:', profile.role);
+        } catch (err: any) {
+          if (attempts >= maxAttempts) {
+            throw err;
+          }
+          if (IS_DEV) console.warn(`⚠️ Login: Error on attempt ${attempts}, retrying...`);
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
-        
-        // Если профиль реально не найден (404 или "no rows")
-        if (profileError.code === 'PGRST116' || profileError.message?.includes('no rows')) {
-          console.error('Profile not found:', profileError);
-          router.push('/onboarding');
-          return;
-        }
-        
-        // Другая ошибка — показать
-        throw profileError;
+      }
+
+      if (!profile) {
+        throw new Error('Не удалось загрузить профиль. Попробуйте еще раз.');
       }
 
       // Редирект в зависимости от роли
+      if (IS_DEV) console.log('🚀 Login: Redirecting to', profile.role === 'admin' ? 'admin' : 'student');
       if (profile.role === 'admin') {
         router.push('/admin/decks');
       } else {
         router.push('/student/decks');
       }
     } catch (err: any) {
+      console.error('❌ Login error:', err);
       setError(err.message || 'Ошибка входа');
-    } finally {
       setLoading(false);
     }
   }
