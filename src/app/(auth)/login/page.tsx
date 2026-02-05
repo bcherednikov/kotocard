@@ -95,12 +95,16 @@ export default function LoginPage() {
       }
 
       // Редирект в зависимости от роли
-      if (IS_DEV) console.log('🚀 Login: Redirecting to', profile.role === 'admin' ? 'admin' : 'student');
-      if (profile.role === 'admin') {
-        router.push('/admin/decks');
-      } else {
-        router.push('/student/decks');
-      }
+      const redirectPath = profile.role === 'admin' ? '/admin/decks' : '/student';
+      console.log('🚀 Login: Redirecting to', redirectPath);
+      
+      // Сбросить loading перед редиректом
+      setLoading(false);
+      
+      // Небольшая задержка для того чтобы состояние успело обновиться
+      setTimeout(() => {
+        router.push(redirectPath);
+      }, 100);
     } catch (err: any) {
       console.error('❌ Login error:', err);
       setError(err.message || 'Ошибка входа');

@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useLoadingTimeout } from '@/hooks/useLoadingTimeout';
 
 type Deck = {
@@ -15,6 +16,7 @@ type Deck = {
 };
 
 export default function StudentDecksPage() {
+  const router = useRouter();
   const { profile, loading: authLoading } = useAuth();
   const [decks, setDecks] = useState<Deck[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,11 +26,17 @@ export default function StudentDecksPage() {
 
   useEffect(() => {
     if (profile) {
+      // Проверить, что это студент
+      if (profile.role !== 'student') {
+        router.push('/admin/decks');
+        return;
+      }
       loadDecks();
     } else if (!authLoading) {
-      setLoading(false);
+      // Если нет профиля и загрузка auth завершена - редирект на логин
+      router.push('/login');
     }
-  }, [profile, authLoading]);
+  }, [profile, authLoading, router]);
 
   async function loadDecks() {
     if (!profile) return;

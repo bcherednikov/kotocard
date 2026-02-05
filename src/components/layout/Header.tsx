@@ -47,10 +47,16 @@ export function Header() {
                 {profile?.role === 'student' && (
                   <>
                     <Link 
+                      href="/student" 
+                      className="text-gray-700 hover:text-gray-900 transition font-medium"
+                    >
+                      🏠 Главная
+                    </Link>
+                    <Link 
                       href="/student/decks" 
                       className="text-gray-700 hover:text-gray-900 transition font-medium"
                     >
-                      Мои наборы
+                      📚 Наборы
                     </Link>
                     <Link 
                       href="/student/test" 

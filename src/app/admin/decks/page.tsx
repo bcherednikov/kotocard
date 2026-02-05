@@ -27,12 +27,17 @@ export default function AdminDecksPage() {
 
   useEffect(() => {
     if (profile) {
+      // Проверить, что это админ
+      if (profile.role !== 'admin') {
+        router.push('/student/decks');
+        return;
+      }
       loadDecks();
     } else if (!authLoading) {
-      // Если нет профиля и загрузка auth завершена - редирект
-      setLoading(false);
+      // Если нет профиля и загрузка auth завершена - редирект на логин
+      router.push('/login');
     }
-  }, [profile, authLoading]);
+  }, [profile, authLoading, router]);
 
   async function loadDecks() {
     if (!profile) return;
