@@ -236,13 +236,16 @@ export default function StudyPage() {
               <div className="bg-white rounded-2xl shadow-2xl p-12">
                 <div className="text-center">
                   <div className="text-6xl mb-6">{frontFlag}</div>
-                  <p className="text-5xl font-bold text-gray-900 mb-4">
+                  <p className="text-5xl font-bold text-gray-900 mb-8">
                     {frontText}
                   </p>
                   {showTranscriptionOnFront && (
-                    <p className="text-3xl text-blue-600 mb-6 font-medium">
-                      📖 {currentCard.ru_transcription}
-                    </p>
+                    <div className="mb-8 p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
+                      <p className="text-sm text-blue-700 mb-2 font-semibold">Произношение:</p>
+                      <p className="text-3xl text-blue-900 font-medium">
+                        {currentCard.ru_transcription}
+                      </p>
+                    </div>
                   )}
                   <p className="text-gray-600 text-lg">
                     👆 Нажми чтобы увидеть ответ
@@ -262,16 +265,22 @@ export default function StudyPage() {
               <div className="bg-gradient-to-br from-green-500 to-blue-600 rounded-2xl shadow-2xl p-12">
                 <div className="text-center text-white">
                   <div className="text-6xl mb-6">{backFlag}</div>
-                  <p className="text-5xl font-bold mb-4">
+                  <p className="text-5xl font-bold mb-6">
                     {backText}
                   </p>
                   {showTranscriptionOnBack && (
-                    <p className="text-3xl text-yellow-200 mb-6 font-medium">
-                      📖 {currentCard.ru_transcription}
-                    </p>
+                    <div className="mb-6 p-4 bg-white/20 rounded-lg border-2 border-white/40">
+                      <p className="text-sm text-yellow-100 mb-2 font-semibold">Произношение:</p>
+                      <p className="text-3xl text-yellow-200 font-medium">
+                        {currentCard.ru_transcription}
+                      </p>
+                    </div>
                   )}
-                  <div className="text-2xl text-green-100 mb-4">
-                    {frontFlag} {frontText}
+                  <div className="mt-8 pt-6 border-t-2 border-white/30">
+                    <p className="text-sm text-green-100 mb-2">Перевод:</p>
+                    <p className="text-2xl text-white font-medium">
+                      {frontFlag} {frontText}
+                    </p>
                   </div>
                 </div>
               </div>
