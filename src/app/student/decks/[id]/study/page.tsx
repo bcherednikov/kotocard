@@ -80,15 +80,20 @@ export default function StudyPage() {
 
     // Переход к следующей карточке
     if (currentIndex < cards.length - 1) {
-      // Скрыть карточку перед переключением
+      // 1. Скрыть карточку
       setIsTransitioning(true);
       
-      // Задержка 200ms для плавного перехода
+      // 2. Подождать пока скроется
       setTimeout(() => {
+        // 3. Сменить карточку и сбросить переворот (уже невидимо)
         setCurrentIndex(currentIndex + 1);
         setIsFlipped(false);
-        setIsTransitioning(false);
-      }, 200);
+        
+        // 4. Небольшая задержка перед показом новой карточки
+        setTimeout(() => {
+          setIsTransitioning(false);
+        }, 50);
+      }, 150);
     } else {
       // Сохранить все ответы батчем в конце сессии
       await saveAllProgress([...answers, { cardId: card.id, isCorrect }]);
