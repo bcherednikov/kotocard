@@ -86,10 +86,8 @@ export default function DeckDetailPage() {
 
       if (error) throw error;
 
-      console.log('✅ Карточка удалена');
       loadCards(); // Перезагрузить список
     } catch (err: any) {
-      console.error('❌ Ошибка удаления карточки:', err);
       alert(err.message || 'Ошибка удаления');
     }
   }
@@ -109,10 +107,8 @@ export default function DeckDetailPage() {
 
       if (error) throw error;
 
-      console.log('✅ Набор удалён');
       router.push('/admin/decks');
     } catch (err: any) {
-      console.error('❌ Ошибка удаления:', err);
       alert(err.message || 'Ошибка удаления набора');
     } finally {
       setDeleting(false);

@@ -31,7 +31,6 @@ export default function NewDeckPage() {
         .map(t => t.trim())
         .filter(t => t.length > 0);
 
-      console.log('Создаём набор:', { name, description, tags });
 
       const { data, error: insertError } = await supabase
         .from('decks')
@@ -47,12 +46,10 @@ export default function NewDeckPage() {
 
       if (insertError) throw insertError;
 
-      console.log('✅ Набор создан:', data);
 
       // Редирект на страницу набора
       router.push(`/admin/decks/${data.id}`);
     } catch (err: any) {
-      console.error('❌ Ошибка создания набора:', err);
       setError(err.message || 'Ошибка создания набора');
     } finally {
       setLoading(false);

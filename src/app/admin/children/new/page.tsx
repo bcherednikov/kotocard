@@ -25,7 +25,6 @@ export default function NewChildPage() {
         throw new Error('Профиль не загружен');
       }
 
-      console.log('🚀 Создаём ребёнка через API...');
 
       // Получить token
       const { data: { session } } = await supabase.auth.getSession();
@@ -50,12 +49,10 @@ export default function NewChildPage() {
         throw new Error(result.error || 'Ошибка создания');
       }
 
-      console.log('✅ Ребёнок создан:', result.children);
 
       // Редирект на список детей
       router.push('/admin/children');
     } catch (err: any) {
-      console.error('❌ Ошибка:', err);
       setError(err.message || 'Ошибка создания ребёнка');
     } finally {
       setLoading(false);

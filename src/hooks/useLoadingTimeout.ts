@@ -15,7 +15,6 @@ export function useLoadingTimeout(isLoading: boolean, timeoutMs: number = 10000)
 
     const timer = setTimeout(() => {
       if (isLoading) {
-        console.error('⏱️ Loading timeout exceeded:', timeoutMs, 'ms');
         setHasTimedOut(true);
       }
     }, timeoutMs);

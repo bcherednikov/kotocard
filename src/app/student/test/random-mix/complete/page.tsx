@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
@@ -18,7 +19,7 @@ type TestResult = {
   answer_mode: string;
 };
 
-export default function TestCompletePage() {
+function TestCompleteContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
@@ -191,5 +192,17 @@ export default function TestCompletePage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function TestCompletePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-xl text-gray-800">Загрузка...</p>
+      </div>
+    }>
+      <TestCompleteContent />
+    </Suspense>
   );
 }

@@ -48,10 +48,8 @@ export default function NewCardPage() {
         throw new Error('Профиль не загружен');
       }
 
-      console.log('🚀 [1/3] Создаём карточку:', { ruText, enText, audioUrl });
 
       // Получить максимальную позицию
-      console.log('📋 [2/3] Получаем максимальную позицию...');
       const { data: maxData, error: maxError } = await supabase
         .from('cards')
         .select('position')
@@ -61,14 +59,11 @@ export default function NewCardPage() {
         .maybeSingle(); // используем maybeSingle вместо single (не вызовет ошибку если нет результатов)
 
       if (maxError && maxError.code !== 'PGRST116') {
-        console.error('❌ Ошибка получения позиции:', maxError);
         throw maxError;
       }
 
       const nextPosition = maxData ? maxData.position + 1 : 0;
-      console.log('✅ [2/3] Следующая позиция:', nextPosition);
 
-      console.log('💾 [3/3] Вставляем карточку в БД...');
       const { data, error: insertError } = await supabase
         .from('cards')
         .insert({
@@ -83,16 +78,13 @@ export default function NewCardPage() {
         .single();
 
       if (insertError) {
-        console.error('❌ Ошибка вставки:', insertError);
         throw insertError;
       }
 
-      console.log('✅ [3/3] Карточка создана:', data);
 
       // Редирект обратно к набору
       router.push(`/admin/decks/${deckId}`);
     } catch (err: any) {
-      console.error('❌ Ошибка создания карточки:', err);
       setError(err.message || 'Ошибка создания карточки');
     } finally {
       setLoading(false);

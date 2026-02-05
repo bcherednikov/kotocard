@@ -17,8 +17,6 @@ export async function POST(request: Request) {
   try {
     const { childId, name, email, password, showRussianTranscription, parentToken } = await request.json();
 
-    console.log('🔐 API: Обновление ребёнка:', childId);
-
     // Проверить что родитель авторизован
     const supabaseClient = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,8 +28,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
 
-    console.log('✅ API: Родитель подтверждён:', parentUser.email);
-
     // 1. Обновить display_name и настройки в profiles
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
@@ -42,12 +38,7 @@ export async function POST(request: Request) {
       })
       .eq('id', childId);
 
-    if (profileError) {
-      console.error('❌ API: Ошибка обновления профиля:', profileError);
-      throw profileError;
-    }
-
-    console.log('✅ API: Профиль обновлён');
+    if (profileError) throw profileError;
 
     // 2. Обновить email и/или пароль в auth.users через Admin API
     const updateData: any = { email };
@@ -60,12 +51,7 @@ export async function POST(request: Request) {
       updateData
     );
 
-    if (authError) {
-      console.error('❌ API: Ошибка обновления auth:', authError);
-      throw authError;
-    }
-
-    console.log('✅ API: Auth обновлён');
+    if (authError) throw authError;
 
     return NextResponse.json({ 
       success: true,
@@ -73,7 +59,6 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ API: Ошибка:', error);
     return NextResponse.json({ 
       error: error.message || 'Ошибка обновления'
     }, { status: 500 });

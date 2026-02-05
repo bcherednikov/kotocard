@@ -54,15 +54,6 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Status */}
-        <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
-          <p className="text-green-800">
-            <strong>✅ Phase 0 завершена!</strong> База данных создана, приложение готово к разработке функций.
-          </p>
-          <p className="text-sm text-green-700 mt-2">
-            Следующий этап: Аутентификация и создание профилей
-          </p>
-        </div>
       </div>
     </div>
   );

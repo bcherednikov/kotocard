@@ -74,12 +74,9 @@ export default function ChildrenPage() {
 
       // Также удалить из auth через Admin API
       const { error: authError } = await supabase.auth.admin.deleteUser(childId);
-      if (authError) console.error('Ошибка удаления auth user:', authError);
 
-      console.log('✅ Ребёнок удалён');
       loadChildren(); // Перезагрузить список
     } catch (err: any) {
-      console.error('❌ Ошибка удаления:', err);
       alert(err.message || 'Ошибка удаления');
     }
   }

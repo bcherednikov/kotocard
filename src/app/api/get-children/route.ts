@@ -17,8 +17,6 @@ export async function POST(request: Request) {
   try {
     const { familyId, childId, parentToken } = await request.json();
 
-    console.log('🔐 API: Получаем список детей для family_id:', familyId);
-
     // Проверить что родитель авторизован
     const supabaseClient = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -64,14 +62,11 @@ export async function POST(request: Request) {
       })
     );
 
-    console.log('✅ API: Загружено детей:', childrenWithEmails.length);
-
     return NextResponse.json({ 
       children: childrenWithEmails
     });
 
   } catch (error: any) {
-    console.error('❌ API: Ошибка:', error);
     return NextResponse.json({ 
       error: error.message || 'Ошибка загрузки детей'
     }, { status: 500 });

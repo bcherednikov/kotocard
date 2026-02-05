@@ -129,7 +129,6 @@ export async function POST(request: Request) {
       averageScore,
     });
   } catch (error: any) {
-    console.error('child-stats error:', error);
     return NextResponse.json(
       { error: error.message || 'Ошибка загрузки статистики' },
       { status: 500 }

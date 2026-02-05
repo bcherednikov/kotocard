@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import { randomId } from '@/lib/utils/uuid';
 
 type Card = {
   id: string;
@@ -147,7 +148,7 @@ export default function DeckTestPage() {
     }
 
     return {
-      id: crypto.randomUUID(),
+      id: randomId(),
       card,
       display,
       answerMode,

@@ -19,7 +19,6 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      console.log('🚀 Регистрация через API...');
 
       // Вызвать API для регистрации (БЕЗ автологина!)
       const response = await fetch('/api/register', {
@@ -40,7 +39,6 @@ export default function RegisterPage() {
         throw new Error(result.error || 'Ошибка регистрации');
       }
 
-      console.log('✅ Регистрация успешна! Выполняем вход...');
 
       // Сразу залогиниться с созданными credentials
       const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -49,14 +47,12 @@ export default function RegisterPage() {
       });
 
       if (signInError) {
-        console.error('❌ Ошибка автологина:', signInError);
         // Если автологин не сработал — редирект на страницу успеха
         localStorage.setItem('registered_email', email);
         router.push('/register/success');
         return;
       }
 
-      console.log('✅ Автологин выполнен! Редирект на onboarding...');
 
       // Небольшая задержка чтобы AuthContext успел загрузить профиль
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -65,7 +61,6 @@ export default function RegisterPage() {
       router.push('/onboarding');
 
     } catch (err: any) {
-      console.error('❌ Ошибка регистрации:', err);
       
       let errorMessage = err.message || 'Ошибка регистрации';
       

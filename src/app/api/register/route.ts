@@ -17,8 +17,6 @@ export async function POST(request: Request) {
   try {
     const { email, password, familyName } = await request.json();
 
-    console.log('🔐 API: Регистрация родителя:', email);
-
     // 1. Создать auth user через Admin API (БЕЗ автологина!)
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
@@ -29,12 +27,7 @@ export async function POST(request: Request) {
       }
     });
 
-    if (authError) {
-      console.error('❌ API: Ошибка создания auth user:', authError);
-      throw authError;
-    }
-
-    console.log('✅ API: Auth user создан:', authData.user.id);
+    if (authError) throw authError;
 
     // 2. Создать семью
     const { data: family, error: familyError } = await supabaseAdmin
@@ -43,12 +36,7 @@ export async function POST(request: Request) {
       .select()
       .single();
 
-    if (familyError) {
-      console.error('❌ API: Ошибка создания семьи:', familyError);
-      throw familyError;
-    }
-
-    console.log('✅ API: Семья создана:', family.id);
+    if (familyError) throw familyError;
 
     // 3. Создать профиль админа
     const { error: profileError } = await supabaseAdmin
@@ -60,12 +48,7 @@ export async function POST(request: Request) {
         role: 'admin'
       });
 
-    if (profileError) {
-      console.error('❌ API: Ошибка создания профиля:', profileError);
-      throw profileError;
-    }
-
-    console.log('✅ API: Профиль админа создан!');
+    if (profileError) throw profileError;
 
     return NextResponse.json({ 
       success: true,
@@ -73,8 +56,6 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ API: Ошибка регистрации:', error);
-    
     let errorMessage = error.message || 'Ошибка регистрации';
     
     if (errorMessage.includes('duplicate') || errorMessage.includes('already')) {

@@ -5,8 +5,6 @@ import { supabase } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-const IS_DEV = process.env.NODE_ENV === 'development';
-
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -20,72 +18,43 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      if (IS_DEV) console.log('🔐 Login: Attempting sign in...');
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password
       });
 
       if (signInError) throw signInError;
-      if (IS_DEV) console.log('✅ Login: Sign in successful');
 
-      // Получить роль пользователя из profiles с повтором
       let profile = null;
       let attempts = 0;
       const maxAttempts = 3;
-      
+
       while (!profile && attempts < maxAttempts) {
         attempts++;
-        console.log(`📋 Login: Loading profile (attempt ${attempts}/${maxAttempts})...`);
-        console.log(`📋 Login: User ID: ${data.user.id}`);
-        
         try {
-          const startTime = Date.now();
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('role')
             .eq('id', data.user.id)
             .single();
-          
-          const duration = Date.now() - startTime;
-          console.log(`📋 Login: Profile query took ${duration}ms`);
-          console.log(`📋 Login: Result:`, { hasData: !!profileData, hasError: !!profileError });
 
           if (profileError) {
-            console.error('❌ Login: Profile error:', JSON.stringify(profileError, null, 2));
-            
-            // Игнорировать AbortError и повторить
             if (profileError.message?.includes('AbortError')) {
-              console.log('⏭️ Login: AbortError, retrying...');
               await new Promise(resolve => setTimeout(resolve, 500));
               continue;
             }
-            
-            // Если профиль не найден
             if (profileError.code === 'PGRST116' || profileError.message?.includes('no rows')) {
-              console.error('❌ Login: Profile not found for user:', data.user.id);
-              setError(`Профиль не найден. User ID: ${data.user.id}. Обратитесь к администратору.`);
+              setError('Профиль не найден. Обратитесь к администратору.');
               setLoading(false);
               return;
             }
-            
-            // Другая ошибка
-            if (attempts >= maxAttempts) {
-              throw profileError;
-            }
-            console.warn(`⚠️ Login: Retrying after error...`);
+            if (attempts >= maxAttempts) throw profileError;
             await new Promise(resolve => setTimeout(resolve, 1000));
             continue;
           }
-
           profile = profileData;
-          console.log('✅ Login: Profile loaded:', profile.role);
         } catch (err: any) {
-          console.error(`❌ Login: Exception on attempt ${attempts}:`, err);
-          if (attempts >= maxAttempts) {
-            throw err;
-          }
-          console.warn(`⚠️ Login: Retrying after exception...`);
+          if (attempts >= maxAttempts) throw err;
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
@@ -94,19 +63,10 @@ export default function LoginPage() {
         throw new Error('Не удалось загрузить профиль. Попробуйте еще раз.');
       }
 
-      // Редирект в зависимости от роли
       const redirectPath = profile.role === 'admin' ? '/admin/decks' : '/student';
-      console.log('🚀 Login: Redirecting to', redirectPath);
-      
-      // Сбросить loading перед редиректом
       setLoading(false);
-      
-      // Небольшая задержка для того чтобы состояние успело обновиться
-      setTimeout(() => {
-        router.push(redirectPath);
-      }, 100);
+      setTimeout(() => router.push(redirectPath), 100);
     } catch (err: any) {
-      console.error('❌ Login error:', err);
       setError(err.message || 'Ошибка входа');
       setLoading(false);
     }

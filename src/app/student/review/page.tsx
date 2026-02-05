@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
@@ -16,7 +17,7 @@ type Card = {
 
 type Direction = 'ru_to_en' | 'en_to_ru';
 
-export default function ReviewPage() {
+function ReviewPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, profile } = useAuth();
@@ -371,5 +372,17 @@ export default function ReviewPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ReviewPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-xl text-gray-800">Загрузка...</p>
+      </div>
+    }>
+      <ReviewPageContent />
+    </Suspense>
   );
 }

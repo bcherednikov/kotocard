@@ -1,10 +1,11 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
-export default function CompletePage() {
+function CompletePageContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const deckId = params.id as string;
@@ -180,5 +181,17 @@ export default function CompletePage() {
         }
       `}</style>
     </div>
+  );
+}
+
+export default function CompletePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-xl text-gray-800">Загрузка...</p>
+      </div>
+    }>
+      <CompletePageContent />
+    </Suspense>
   );
 }

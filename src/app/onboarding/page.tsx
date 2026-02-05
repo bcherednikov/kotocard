@@ -58,7 +58,6 @@ export default function OnboardingPage() {
     setLoading(true);
     setError('');
 
-    console.log('🚀 Создаём детей...');
 
     try {
       // Проверить что пользователь залогинен
@@ -66,7 +65,6 @@ export default function OnboardingPage() {
         throw new Error('Вы не авторизованы. Пожалуйста войдите в систему.');
       }
 
-      console.log('✅ Родитель:', user.email, 'Family ID:', profile.family_id);
 
       // Получить token для API
       const { data: { session } } = await supabase.auth.getSession();
@@ -75,7 +73,6 @@ export default function OnboardingPage() {
       }
 
       // Вызвать API для создания детей
-      console.log('📡 Отправляем запрос на сервер...');
       const response = await fetch('/api/create-children', {
         method: 'POST',
         headers: {
@@ -94,13 +91,11 @@ export default function OnboardingPage() {
         throw new Error(result.error || 'Ошибка создания детей');
       }
 
-      console.log('🎉 Дети созданы:', result.children);
 
       // Редирект на админ панель
       router.push('/admin/decks');
       
     } catch (err: any) {
-      console.error('❌ Ошибка:', err);
       setError(err.message || 'Ошибка создания детей');
     } finally {
       setLoading(false);

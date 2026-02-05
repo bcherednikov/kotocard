@@ -34,7 +34,6 @@ export default function BulkCreateCardsPage() {
         return;
       }
 
-      console.log('📤 Отправляем слова на сервер...');
 
       // Вызвать API
       const response = await fetch('/api/bulk-create-cards', {
@@ -55,7 +54,6 @@ export default function BulkCreateCardsPage() {
         throw new Error(data.error || 'Ошибка создания карточек');
       }
 
-      console.log('✅ Карточки созданы:', data);
       setResult(data);
 
       // Через 2 секунды вернуться к набору
@@ -64,7 +62,6 @@ export default function BulkCreateCardsPage() {
       }, 2000);
 
     } catch (err: any) {
-      console.error('❌ Ошибка:', err);
       setError(err.message || 'Ошибка создания карточек');
     } finally {
       setLoading(false);

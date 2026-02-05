@@ -17,8 +17,6 @@ export async function POST(request: Request) {
   try {
     const { children, familyId, parentToken } = await request.json();
 
-    console.log('🔐 API: Создаём детей для family_id:', familyId);
-
     // Проверить что родитель авторизован (используя token из клиента)
     const supabaseClient = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,15 +28,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
 
-    console.log('✅ API: Родитель подтверждён:', parentUser.email);
-
     // Создать детей через Admin API (БЕЗ автоматического логина!)
     const createdChildren = [];
 
     for (const child of children) {
       if (!child.name.trim()) continue;
-
-      console.log(`👶 API: Создаём ${child.name}...`);
 
       // 1. Создать auth user через Admin API
       const { data: childAuthData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -50,12 +44,7 @@ export async function POST(request: Request) {
         }
       });
 
-      if (authError) {
-        console.error(`❌ API: Ошибка создания auth для ${child.name}:`, authError);
-        throw authError;
-      }
-
-      console.log(`✅ API: Auth создан для ${child.name}, id:`, childAuthData.user.id);
+      if (authError) throw authError;
 
       // 2. Создать профиль студента
       const { error: profileError } = await supabaseAdmin
@@ -67,12 +56,7 @@ export async function POST(request: Request) {
           role: 'student'
         });
 
-      if (profileError) {
-        console.error(`❌ API: Ошибка создания профиля для ${child.name}:`, profileError);
-        throw profileError;
-      }
-
-      console.log(`✅ API: Профиль создан для ${child.name}`);
+      if (profileError) throw profileError;
 
       createdChildren.push({
         name: child.name,
@@ -81,15 +65,12 @@ export async function POST(request: Request) {
       });
     }
 
-    console.log('🎉 API: Все дети созданы успешно!');
-
     return NextResponse.json({ 
       success: true, 
       children: createdChildren 
     });
 
   } catch (error: any) {
-    console.error('❌ API: Ошибка:', error);
     return NextResponse.json({ 
       error: error.message || 'Ошибка создания детей' 
     }, { status: 500 });

@@ -27,8 +27,6 @@ export async function POST(request: Request) {
   try {
     const { deckId, text, parentToken } = await request.json();
 
-    console.log('🔐 API: Массовое создание карточек для deck:', deckId);
-
     // Проверить авторизацию
     const supabaseClient = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -50,13 +48,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Нет слов для перевода' }, { status: 400 });
     }
 
-    console.log('📝 API: Обрабатываем', lines.length, 'слов...');
-
     // Определить язык первого слова (считаем что все слова на одном языке)
     const sourceLang = detectLanguage(lines[0]);
     const targetLang = sourceLang === 'ru' ? 'en' : 'ru';
-
-    console.log(`🌐 API: Определён язык: ${sourceLang} → ${targetLang}`);
 
     // Получить текущую максимальную позицию
     const { data: maxCard } = await supabaseAdmin
@@ -77,15 +71,10 @@ export async function POST(request: Request) {
       const sourceText = lines[i];
 
       try {
-        console.log(`  [${i + 1}/${lines.length}] Переводим: ${sourceText}`);
-
-        // Перевести текст
         const translatedText = await translate(sourceText, { 
           from: sourceLang, 
           to: targetLang 
         });
-
-        console.log(`  ✅ Переведено: ${sourceText} → ${translatedText}`);
 
         // Создать карточку
         const cardData = sourceLang === 'ru' 
@@ -105,15 +94,10 @@ export async function POST(request: Request) {
         if (insertError) throw insertError;
 
         createdCards.push(card);
-        console.log(`  ✅ Карточка создана: ${cardData.ru_text} / ${cardData.en_text}`);
-
       } catch (err: any) {
-        console.error(`  ❌ Ошибка для "${sourceText}":`, err.message);
         errors.push({ word: sourceText, error: err.message });
       }
     }
-
-    console.log(`🎉 API: Создано ${createdCards.length} карточек`);
 
     return NextResponse.json({ 
       success: true,
@@ -123,7 +107,6 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ API: Ошибка:', error);
     return NextResponse.json({ 
       error: error.message || 'Ошибка создания карточек'
     }, { status: 500 });

@@ -1,11 +1,12 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-export default function ReviewCompletePage() {
+function ReviewCompleteContent() {
   const searchParams = useSearchParams();
-  
+
   const correct = parseInt(searchParams.get('correct') || '0');
   const incorrect = parseInt(searchParams.get('incorrect') || '0');
   const total = parseInt(searchParams.get('total') || '50');
@@ -97,5 +98,17 @@ export default function ReviewCompletePage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ReviewCompletePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 flex items-center justify-center">
+        <p className="text-gray-600">Загрузка...</p>
+      </div>
+    }>
+      <ReviewCompleteContent />
+    </Suspense>
   );
 }

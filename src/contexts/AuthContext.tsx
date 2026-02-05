@@ -29,8 +29,7 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
 });
 
-const PROFILE_LOAD_TIMEOUT = 5000; // 5 секунд таймаут
-const IS_DEV = process.env.NODE_ENV === 'development';
+const PROFILE_LOAD_TIMEOUT = 5000;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -40,141 +39,73 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Функция для загрузки профиля с защитой от дублирования и таймаутом
     async function loadProfile(userId: string, retryCount = 0) {
-      // Предотвратить одновременные запросы
-      if (isLoadingProfileRef.current) {
-        if (IS_DEV) console.log('🔄 AuthContext: Profile already loading, skipping...');
-        return;
-      }
-      
+      if (isLoadingProfileRef.current) return;
       isLoadingProfileRef.current = true;
-      
-      // Установить таймаут для защиты от зависания
-      if (loadTimeoutRef.current) {
-        clearTimeout(loadTimeoutRef.current);
-      }
-      
+
+      if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
       loadTimeoutRef.current = setTimeout(() => {
-        console.warn('⏱️ AuthContext: Profile load timeout, forcing loading=false');
         isLoadingProfileRef.current = false;
         setLoading(false);
       }, PROFILE_LOAD_TIMEOUT);
-      
+
       try {
-        console.log('📋 AuthContext: Loading profile for user:', userId);
-        console.log('📋 AuthContext: Starting Supabase query...');
-        
-        const startTime = Date.now();
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', userId)
           .single();
-        
-        const duration = Date.now() - startTime;
-        console.log(`📋 AuthContext: Query completed in ${duration}ms`);
-        
-        // Очистить таймаут при успехе
+
         if (loadTimeoutRef.current) {
           clearTimeout(loadTimeoutRef.current);
           loadTimeoutRef.current = null;
         }
-        
-        // ВСЕГДА логируем результат запроса
-        console.log('📋 AuthContext: Query result:', { data, error, hasData: !!data, hasError: !!error });
-        
+
         if (error) {
-          console.error('❌ AuthContext: Full error object:', JSON.stringify(error, null, 2));
-          
-          // Игнорировать AbortError в dev режиме
           if (error.message?.includes('AbortError')) {
-            console.log('⏭️ AuthContext: AbortError ignored');
             setLoading(false);
             isLoadingProfileRef.current = false;
             return;
           }
-          
-          // Если профиль не найден
           if (error.code === 'PGRST116' || error.message?.includes('no rows')) {
-            console.warn('⚠️ AuthContext: Profile not found for user:', userId);
             setProfile(null);
             setLoading(false);
             isLoadingProfileRef.current = false;
             return;
           }
-          
-          // Попробовать повторить один раз при других ошибках
           if (retryCount === 0) {
-            console.warn('🔄 AuthContext: Retrying profile load...', error.message);
             isLoadingProfileRef.current = false;
             await new Promise(resolve => setTimeout(resolve, 500));
             return loadProfile(userId, 1);
           }
-          
-          console.error('❌ AuthContext: Profile error after retry:', error.message);
         }
-        
+
         if (data) {
-          console.log('✅ AuthContext: Profile loaded:', data.display_name, data.role);
           setProfile(data);
-        } else if (!error) {
-          console.warn('⚠️ AuthContext: No data and no error - unexpected state');
         }
-      } catch (err: any) {
-        console.error('❌ AuthContext: Exception caught:', err);
-        console.error('❌ AuthContext: Exception details:', JSON.stringify(err, null, 2));
-        
-        // Очистить таймаут при ошибке
+      } catch (_err) {
         if (loadTimeoutRef.current) {
           clearTimeout(loadTimeoutRef.current);
           loadTimeoutRef.current = null;
         }
-        
-        if (!err.message?.includes('AbortError')) {
-          console.error('❌ AuthContext: Load failed:', err.message);
-        }
       } finally {
-        console.log('📋 AuthContext: Finally block - cleaning up');
         isLoadingProfileRef.current = false;
         setLoading(false);
       }
     }
-    
-    // Получить текущего пользователя
-    if (IS_DEV) console.log('🔐 AuthContext: Checking current user...');
+
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
-      
-      if (user) {
-        if (IS_DEV) console.log('✅ AuthContext: User found:', user.email);
-        loadProfile(user.id);
-      } else {
-        if (IS_DEV) console.log('👤 AuthContext: No user');
-        setLoading(false);
-      }
-    }).catch((err) => {
-      if (!err.message?.includes('AbortError')) {
-        console.error('❌ AuthContext error:', err.message);
-      }
-      setLoading(false);
-    });
-    
-    // Подписка на изменения auth состояния
+      if (user) loadProfile(user.id);
+      else setLoading(false);
+    }).catch(() => setLoading(false));
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (IS_DEV) console.log('🔐 AuthContext: Auth state changed:', event);
-        
-        // Игнорировать INITIAL_SESSION (оно дублирует getUser выше)
-        if (event === 'INITIAL_SESSION') {
-          return;
-        }
-        
+        if (event === 'INITIAL_SESSION') return;
         setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          await loadProfile(session.user.id);
-        } else {
+        if (session?.user) await loadProfile(session.user.id);
+        else {
           setProfile(null);
           setLoading(false);
         }

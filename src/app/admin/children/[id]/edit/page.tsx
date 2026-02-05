@@ -78,7 +78,6 @@ export default function EditChildPage() {
         throw new Error('Профиль не загружен');
       }
 
-      console.log('🚀 Обновляем ребёнка через API...');
 
       // Получить token
       const { data: { session } } = await supabase.auth.getSession();
@@ -106,12 +105,10 @@ export default function EditChildPage() {
         throw new Error(result.error || 'Ошибка обновления');
       }
 
-      console.log('✅ Ребёнок обновлён');
 
       // Редирект на список детей
       router.push('/admin/children');
     } catch (err: any) {
-      console.error('❌ Ошибка:', err);
       setError(err.message || 'Ошибка обновления');
     } finally {
       setSaving(false);

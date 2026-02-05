@@ -53,7 +53,6 @@ export default function EditCardPage() {
     setSaving(true);
 
     try {
-      console.log('Обновляем карточку:', { ruText, enText, audioUrl });
 
       const { error: updateError } = await supabase
         .from('cards')
@@ -68,12 +67,10 @@ export default function EditCardPage() {
 
       if (updateError) throw updateError;
 
-      console.log('✅ Карточка обновлена');
 
       // Редирект обратно к набору
       router.push(`/admin/decks/${deckId}`);
     } catch (err: any) {
-      console.error('❌ Ошибка обновления карточки:', err);
       setError(err.message || 'Ошибка обновления карточки');
     } finally {
       setSaving(false);
