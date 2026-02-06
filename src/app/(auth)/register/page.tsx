@@ -1,17 +1,27 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { user, isInitialized, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [familyName, setFamilyName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [waitingForAuth, setWaitingForAuth] = useState(false);
+
+  // Редирект на onboarding когда AuthContext загрузил профиль после логина
+  useEffect(() => {
+    if (waitingForAuth && isInitialized && !isLoading && user) {
+      router.replace('/onboarding');
+    }
+  }, [waitingForAuth, isInitialized, isLoading, user, router]);
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
@@ -19,7 +29,6 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-
       // Вызвать API для регистрации (БЕЗ автологина!)
       const response = await fetch('/api/register', {
         method: 'POST',
@@ -39,7 +48,6 @@ export default function RegisterPage() {
         throw new Error(result.error || 'Ошибка регистрации');
       }
 
-
       // Сразу залогиниться с созданными credentials
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
@@ -53,25 +61,20 @@ export default function RegisterPage() {
         return;
       }
 
-
-      // Небольшая задержка чтобы AuthContext успел загрузить профиль
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Редирект на onboarding для добавления детей
-      router.push('/onboarding');
+      // Ставим флаг что ждём загрузку профиля
+      // Редирект произойдёт через useEffect когда AuthContext загрузит профиль
+      setWaitingForAuth(true);
 
     } catch (err: any) {
-      
       let errorMessage = err.message || 'Ошибка регистрации';
-      
+
       if (errorMessage.includes('invalid')) {
         errorMessage = 'Используйте реальный email адрес (не example.com)';
       } else if (errorMessage.includes('already') || errorMessage.includes('зарегистрирован')) {
         errorMessage = 'Этот email уже зарегистрирован. Попробуйте войти.';
       }
-      
+
       setError(errorMessage);
-    } finally {
       setLoading(false);
     }
   }
@@ -143,10 +146,10 @@ export default function RegisterPage() {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || waitingForAuth}
           className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? 'Создаём аккаунт...' : 'Создать аккаунт'}
+          {loading || waitingForAuth ? 'Создаём аккаунт...' : 'Создать аккаунт'}
         </button>
       </form>
 

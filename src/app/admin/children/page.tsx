@@ -14,7 +14,7 @@ type Child = {
 };
 
 export default function ChildrenPage() {
-  const { profile, loading: authLoading } = useAuth();
+  const { profile } = useAuth();
   const [children, setChildren] = useState<Child[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -28,11 +28,9 @@ export default function ChildrenPage() {
     if (!profile) return;
 
     try {
-      // Получить token
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Сессия не найдена');
 
-      // Вызвать API для получения списка детей с email'ами
       const response = await fetch('/api/get-children', {
         method: 'POST',
         headers: {
@@ -64,7 +62,6 @@ export default function ChildrenPage() {
     }
 
     try {
-      // Удалить профиль (auth.users удалится автоматически через CASCADE если настроено)
       const { error: profileError } = await supabase
         .from('profiles')
         .delete()
@@ -72,16 +69,15 @@ export default function ChildrenPage() {
 
       if (profileError) throw profileError;
 
-      // Также удалить из auth через Admin API
       const { error: authError } = await supabase.auth.admin.deleteUser(childId);
 
-      loadChildren(); // Перезагрузить список
+      loadChildren();
     } catch (err: any) {
       alert(err.message || 'Ошибка удаления');
     }
   }
 
-  if (authLoading || loading) {
+  if (loading) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
         <p className="text-xl text-gray-800">Загрузка...</p>
@@ -92,7 +88,6 @@ export default function ChildrenPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
-        {/* Заголовок */}
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
@@ -110,7 +105,6 @@ export default function ChildrenPage() {
           </Link>
         </div>
 
-        {/* Список детей */}
         {children.length === 0 ? (
           <div className="bg-white rounded-xl shadow-lg p-12 text-center">
             <div className="text-6xl mb-4">👶</div>

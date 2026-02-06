@@ -4,8 +4,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useLoadingTimeout } from '@/hooks/useLoadingTimeout';
 
 type Deck = {
   id: string;
@@ -16,33 +14,21 @@ type Deck = {
 };
 
 export default function StudentDecksPage() {
-  const router = useRouter();
-  const { profile, loading: authLoading } = useAuth();
+  const { profile } = useAuth();
   const [decks, setDecks] = useState<Deck[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  const hasTimedOut = useLoadingTimeout(authLoading || loading, 10000);
 
   useEffect(() => {
     if (profile) {
-      // Проверить, что это студент
-      if (profile.role !== 'student') {
-        router.push('/admin/decks');
-        return;
-      }
       loadDecks();
-    } else if (!authLoading) {
-      // Если нет профиля и загрузка auth завершена - редирект на логин
-      router.push('/login');
     }
-  }, [profile, authLoading, router]);
+  }, [profile]);
 
   async function loadDecks() {
     if (!profile) return;
 
     try {
-      // Загрузить наборы семьи
       const { data: decksData, error: decksError } = await supabase
         .from('decks')
         .select('id, name, description, tags')
@@ -51,7 +37,6 @@ export default function StudentDecksPage() {
 
       if (decksError) throw decksError;
 
-      // Для каждого набора получить количество карточек
       const decksWithCount = await Promise.all(
         (decksData || []).map(async (deck) => {
           const { count } = await supabase
@@ -76,29 +61,7 @@ export default function StudentDecksPage() {
     }
   }
 
-  if (hasTimedOut) {
-    return (
-      <div className="container mx-auto px-4 py-16">
-        <div className="max-w-md mx-auto bg-red-50 border border-red-200 rounded-xl p-8 text-center">
-          <div className="text-5xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Превышено время загрузки
-          </h2>
-          <p className="text-gray-700 mb-6">
-            Страница загружается слишком долго. Попробуйте обновить страницу.
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
-          >
-            Обновить страницу
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (authLoading || loading) {
+  if (loading) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
         <p className="text-xl text-gray-800">Загрузка...</p>
@@ -127,7 +90,6 @@ export default function StudentDecksPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-6xl mx-auto">
-        {/* Приветствие */}
         <div className="text-center mb-12">
           <div className="text-6xl mb-4">👋</div>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
@@ -138,7 +100,6 @@ export default function StudentDecksPage() {
           </p>
         </div>
 
-        {/* Список наборов */}
         {decks.length === 0 ? (
           <div className="bg-white rounded-xl shadow-lg p-12 text-center">
             <div className="text-6xl mb-4">📚</div>
@@ -151,7 +112,6 @@ export default function StudentDecksPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Режим повторения - специальная карточка */}
             <Link
               href="/student/review/start"
               className="bg-gradient-to-br from-orange-500 to-red-600 rounded-xl shadow-lg p-6 hover:shadow-2xl transition transform hover:scale-105 border-4 border-yellow-400"
@@ -178,7 +138,6 @@ export default function StudentDecksPage() {
               </div>
             </Link>
 
-            {/* Обычные наборы */}
             {decks.map((deck) => (
               <Link
                 key={deck.id}

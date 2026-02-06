@@ -1,16 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { user, profile, isInitialized, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Если уже залогинен - редирект
+  useEffect(() => {
+    if (isInitialized && !isLoading && user && profile) {
+      const redirectPath = profile.role === 'admin' ? '/admin/decks' : '/student';
+      router.replace(redirectPath);
+    }
+  }, [isInitialized, isLoading, user, profile, router]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -18,54 +28,15 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password
       });
 
       if (signInError) throw signInError;
 
-      let profile = null;
-      let attempts = 0;
-      const maxAttempts = 3;
-
-      while (!profile && attempts < maxAttempts) {
-        attempts++;
-        try {
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', data.user.id)
-            .single();
-
-          if (profileError) {
-            if (profileError.message?.includes('AbortError')) {
-              await new Promise(resolve => setTimeout(resolve, 500));
-              continue;
-            }
-            if (profileError.code === 'PGRST116' || profileError.message?.includes('no rows')) {
-              setError('Профиль не найден. Обратитесь к администратору.');
-              setLoading(false);
-              return;
-            }
-            if (attempts >= maxAttempts) throw profileError;
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            continue;
-          }
-          profile = profileData;
-        } catch (err: any) {
-          if (attempts >= maxAttempts) throw err;
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
-
-      if (!profile) {
-        throw new Error('Не удалось загрузить профиль. Попробуйте еще раз.');
-      }
-
-      const redirectPath = profile.role === 'admin' ? '/admin/decks' : '/student';
-      setLoading(false);
-      setTimeout(() => router.push(redirectPath), 100);
+      // AuthContext сам загрузит профиль и установит isInitialized
+      // Редирект произойдёт через useEffect выше когда профиль загрузится
     } catch (err: any) {
       setError(err.message || 'Ошибка входа');
       setLoading(false);

@@ -13,36 +13,19 @@ type ChildInput = {
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, profile } = useAuth();
   const [children, setChildren] = useState<ChildInput[]>([
     { name: '', email: '', password: '' }
   ]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Защита: редирект на login если не авторизован
-  if (!authLoading && !user) {
-    router.push('/login');
-    return null;
-  }
-
-  // Показать загрузку пока AuthContext грузит данные
-  if (authLoading) {
-    return (
-      <div className="container mx-auto px-4 py-16">
-        <div className="max-w-3xl mx-auto text-center">
-          <p className="text-xl text-gray-800">Загрузка...</p>
-        </div>
-      </div>
-    );
-  }
-
   function addChild() {
     setChildren([...children, { name: '', email: '', password: '' }]);
   }
 
   function removeChild(index: number) {
-    if (children.length === 1) return; // Минимум 1 ребёнок
+    if (children.length === 1) return;
     const updated = children.filter((_, i) => i !== index);
     setChildren(updated);
   }
@@ -58,21 +41,16 @@ export default function OnboardingPage() {
     setLoading(true);
     setError('');
 
-
     try {
-      // Проверить что пользователь залогинен
       if (!user || !profile) {
         throw new Error('Вы не авторизованы. Пожалуйста войдите в систему.');
       }
 
-
-      // Получить token для API
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         throw new Error('Сессия не найдена. Пожалуйста войдите заново.');
       }
 
-      // Вызвать API для создания детей
       const response = await fetch('/api/create-children', {
         method: 'POST',
         headers: {
@@ -91,10 +69,8 @@ export default function OnboardingPage() {
         throw new Error(result.error || 'Ошибка создания детей');
       }
 
-
-      // Редирект на админ панель
       router.push('/admin/decks');
-      
+
     } catch (err: any) {
       setError(err.message || 'Ошибка создания детей');
     } finally {
@@ -103,11 +79,9 @@ export default function OnboardingPage() {
   }
 
   async function handleSkip() {
-    // Можно пропустить и добавить детей позже через управление детьми
     router.push('/admin/children');
   }
 
-  // Форма работает всегда — если нет данных в контексте, загрузим при submit
   return (
     <div className="container mx-auto px-4 py-16">
       <div className="max-w-3xl mx-auto">
@@ -134,7 +108,7 @@ export default function OnboardingPage() {
                   </button>
                 )}
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">
                   Имя ребёнка
@@ -149,7 +123,7 @@ export default function OnboardingPage() {
                   disabled={loading}
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">
                   Email для входа
@@ -167,7 +141,7 @@ export default function OnboardingPage() {
                   Ребёнок будет входить используя этот email
                 </p>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">
                   Пароль
@@ -223,7 +197,7 @@ export default function OnboardingPage() {
 
         <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-sm text-blue-800">
-            <strong>💡 Совет:</strong> Используйте простые email'ы типа <code className="bg-white px-2 py-1 rounded">petya@family.local</code> 
+            <strong>💡 Совет:</strong> Используйте простые email'ы типа <code className="bg-white px-2 py-1 rounded">petya@family.local</code>
             и лёгкие пароли которые дети смогут запомнить.
           </p>
         </div>

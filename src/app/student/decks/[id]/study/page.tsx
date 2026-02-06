@@ -68,9 +68,16 @@ function StudyPageContent() {
     if (!user || !cards[currentIndex]) return;
 
     const card = cards[currentIndex];
+    const newAnswers = [...answers, { cardId: card.id, isCorrect }];
 
-    // Сохранить ответ для батчевой отправки
-    setAnswers(prev => [...prev, { cardId: card.id, isCorrect }]);
+    setAnswers(newAnswers);
+
+    // Сохранять прогресс после каждого ответа, чтобы при уходе со страницы данные не терялись
+    if (currentIndex < cards.length - 1) {
+      saveAllProgress(newAnswers); // без await, чтобы не блокировать переход к следующей карточке
+    } else {
+      await saveAllProgress(newAnswers);
+    }
 
     // Обновить статистику сессии
     const newStats = {
@@ -81,25 +88,15 @@ function StudyPageContent() {
 
     // Переход к следующей карточке
     if (currentIndex < cards.length - 1) {
-      // 1. Скрыть карточку
       setIsTransitioning(true);
-      
-      // 2. Подождать пока скроется
       setTimeout(() => {
-        // 3. Сменить карточку и сбросить переворот (уже невидимо)
         setCurrentIndex(currentIndex + 1);
         setIsFlipped(false);
-        
-        // 4. Небольшая задержка перед показом новой карточки
         setTimeout(() => {
           setIsTransitioning(false);
         }, 50);
       }, 150);
     } else {
-      // Сохранить все ответы батчем в конце сессии
-      await saveAllProgress([...answers, { cardId: card.id, isCorrect }]);
-      
-      // Редирект на результаты
       router.push(`/student/decks/${deckId}/complete?correct=${newStats.correct}&incorrect=${newStats.incorrect}`);
     }
   }

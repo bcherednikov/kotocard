@@ -40,7 +40,7 @@ export default function SelectDeckForTestPage() {
 
       if (decksError) throw decksError;
 
-      // Для каждого набора получить количество карточек и изученных карточек
+      // Для каждого набора получить количество карточек и изученных (со статусом "Знаю" = mastered)
       const decksWithStats = await Promise.all(
         (decksData || []).map(async (deck) => {
           // Всего карточек
@@ -49,17 +49,32 @@ export default function SelectDeckForTestPage() {
             .select('*', { count: 'exact', head: true })
             .eq('deck_id', deck.id);
 
-          // Изученных карточек (есть прогресс у этого пользователя)
-          const { count: studiedCount } = await supabase
-            .from('card_progress')
-            .select('card_id', { count: 'exact', head: true })
-            .eq('user_id', profile.id)
-            .gt('times_shown', 0);
+          const totalCardsCount = totalCount || 0;
+
+          // Изучено = количество слов (карточек), у которых есть хотя бы одна запись со статусом "Знаю" (mastered). Считаем каждое слово один раз.
+          let studiedCardsCount = 0;
+          if (totalCardsCount > 0) {
+            const { data: deckCards } = await supabase
+              .from('cards')
+              .select('id')
+              .eq('deck_id', deck.id);
+            const cardIds = (deckCards ?? []).map((c) => c.id);
+            if (cardIds.length > 0) {
+              const { data: masteredRows } = await supabase
+                .from('card_progress')
+                .select('card_id')
+                .eq('user_id', profile.id)
+                .eq('status', 'mastered')
+                .in('card_id', cardIds);
+              const distinctCardIds = new Set((masteredRows ?? []).map((r) => r.card_id));
+              studiedCardsCount = distinctCardIds.size;
+            }
+          }
 
           return {
             ...deck,
-            totalCardsCount: totalCount || 0,
-            studiedCardsCount: studiedCount || 0
+            totalCardsCount,
+            studiedCardsCount
           };
         })
       );
@@ -179,15 +194,25 @@ export default function SelectDeckForTestPage() {
                 )}
 
                 {/* Прогресс бар */}
-                <div className="mt-4">
+                <div className="mt-4 min-w-0">
                   <div className="flex justify-between text-xs text-gray-600 mb-1">
                     <span>Прогресс изучения</span>
-                    <span>{Math.round((deck.studiedCardsCount / deck.totalCardsCount) * 100)}%</span>
+                    <span>
+                      {deck.totalCardsCount === 0
+                        ? '0%'
+                        : `${Math.round(Math.min(100, (deck.studiedCardsCount / deck.totalCardsCount) * 100))}%`}
+                    </span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                     <div
-                      className="bg-gradient-to-r from-blue-500 to-cyan-600 h-2 rounded-full transition-all"
-                      style={{ width: `${(deck.studiedCardsCount / deck.totalCardsCount) * 100}%` }}
+                      className="bg-gradient-to-r from-blue-500 to-cyan-600 h-2 rounded-full transition-all min-w-0 max-w-full"
+                      style={{
+                        width: `${
+                          deck.totalCardsCount === 0
+                            ? 0
+                            : Math.min(100, (deck.studiedCardsCount / deck.totalCardsCount) * 100)
+                        }%`
+                      }}
                     />
                   </div>
                 </div>

@@ -4,8 +4,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useLoadingTimeout } from '@/hooks/useLoadingTimeout';
 
 type Deck = {
   id: string;
@@ -17,27 +15,16 @@ type Deck = {
 };
 
 export default function AdminDecksPage() {
-  const router = useRouter();
-  const { profile, loading: authLoading } = useAuth();
+  const { profile } = useAuth();
   const [decks, setDecks] = useState<Deck[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  const hasTimedOut = useLoadingTimeout(authLoading || loading, 10000);
 
   useEffect(() => {
     if (profile) {
-      // Проверить, что это админ
-      if (profile.role !== 'admin') {
-        router.push('/student/decks');
-        return;
-      }
       loadDecks();
-    } else if (!authLoading) {
-      // Если нет профиля и загрузка auth завершена - редирект на логин
-      router.push('/login');
     }
-  }, [profile, authLoading, router]);
+  }, [profile]);
 
   async function loadDecks() {
     if (!profile) return;
@@ -67,29 +54,7 @@ export default function AdminDecksPage() {
     }
   }
 
-  if (hasTimedOut) {
-    return (
-      <div className="container mx-auto px-4 py-16">
-        <div className="max-w-md mx-auto bg-red-50 border border-red-200 rounded-xl p-8 text-center">
-          <div className="text-5xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Превышено время загрузки
-          </h2>
-          <p className="text-gray-700 mb-6">
-            Страница загружается слишком долго. Попробуйте обновить страницу.
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
-          >
-            Обновить страницу
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (authLoading || loading) {
+  if (loading) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
         <p className="text-xl text-gray-800">Загрузка...</p>
@@ -118,7 +83,6 @@ export default function AdminDecksPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-6xl mx-auto">
-        {/* Заголовок */}
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
@@ -136,7 +100,6 @@ export default function AdminDecksPage() {
           </Link>
         </div>
 
-        {/* Список наборов */}
         {decks.length === 0 ? (
           <div className="bg-white rounded-xl shadow-lg p-12 text-center">
             <div className="text-6xl mb-4">📚</div>

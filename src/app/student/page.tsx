@@ -4,8 +4,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useLoadingTimeout } from '@/hooks/useLoadingTimeout';
 
 type Deck = {
   id: string;
@@ -24,32 +22,30 @@ type Stats = {
 };
 
 export default function StudentDashboardPage() {
-  const router = useRouter();
-  const { profile, loading: authLoading } = useAuth();
+  const { profile } = useAuth();
   const [decks, setDecks] = useState<Deck[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  const hasTimedOut = useLoadingTimeout(authLoading || loading, 10000);
 
   useEffect(() => {
     if (profile) {
-      if (profile.role !== 'student') {
-        router.push('/admin/decks');
-        return;
-      }
       loadData();
-    } else if (!authLoading) {
-      router.push('/login');
     }
-  }, [profile, authLoading, router]);
+  }, [profile]);
+
+  // Пересчитать статистику при возврате на вкладку (например, после изучения карточек)
+  useEffect(() => {
+    if (!profile) return;
+    const onFocus = () => loadData();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [profile]);
 
   async function loadData() {
     if (!profile) return;
 
     try {
-      // Загрузить наборы и статистику параллельно
       await Promise.all([
         loadDecks(),
         loadStats()
@@ -70,7 +66,7 @@ export default function StudentDashboardPage() {
       .select('id, name, description, tags')
       .eq('family_id', profile.family_id)
       .order('created_at', { ascending: false })
-      .limit(5); // Показываем только 5 последних
+      .limit(5);
 
     if (decksError) throw decksError;
 
@@ -94,32 +90,26 @@ export default function StudentDashboardPage() {
   async function loadStats() {
     if (!profile) return;
 
-    // Статистика тестов (как в /student/test/history, период "за всё время")
     const { data: testsData, error: testsError } = await supabase
       .from('test_sessions')
       .select('*')
       .eq('user_id', profile.id)
       .not('completed_at', 'is', null);
 
-    if (testsError) {
-      throw testsError;
-    }
+    if (testsError) throw testsError;
 
     const totalTests = testsData?.length || 0;
     const correctAnswers = testsData?.reduce((sum, s) => sum + s.correct_answers, 0) || 0;
     const totalQuestions = testsData?.reduce((sum, s) => sum + s.total_questions, 0) || 0;
     const averageScore = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
 
-    // Количество изученных карточек (как в истории)
     const { data: cardsData, error: cardsError } = await supabase
       .from('card_progress')
       .select('card_id')
       .eq('user_id', profile.id)
       .gt('times_shown', 0);
 
-    if (cardsError) {
-      throw cardsError;
-    }
+    if (cardsError) throw cardsError;
 
     const uniqueCards = new Set(cardsData?.map(c => c.card_id) || []);
 
@@ -132,29 +122,7 @@ export default function StudentDashboardPage() {
     });
   }
 
-  if (hasTimedOut) {
-    return (
-      <div className="container mx-auto px-4 py-16">
-        <div className="max-w-md mx-auto bg-red-50 border border-red-200 rounded-xl p-8 text-center">
-          <div className="text-5xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Превышено время загрузки
-          </h2>
-          <p className="text-gray-700 mb-6">
-            Страница загружается слишком долго. Попробуйте обновить страницу.
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
-          >
-            Обновить страницу
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (authLoading || loading) {
+  if (loading) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
         <p className="text-xl text-gray-800">Загрузка...</p>
@@ -183,7 +151,6 @@ export default function StudentDashboardPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-6xl mx-auto">
-        {/* Приветствие */}
         <div className="text-center mb-12">
           <div className="text-6xl mb-4">👋</div>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
@@ -194,10 +161,9 @@ export default function StudentDashboardPage() {
           </p>
         </div>
 
-        {/* Статистика */}
         <div className="mb-12">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">📊 Твои результаты</h2>
-          
+
           {stats && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
               <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg">
@@ -242,7 +208,6 @@ export default function StudentDashboardPage() {
           </div>
         </div>
 
-        {/* Наборы карточек */}
         <div>
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900">📚 Наборы для изучения</h2>
@@ -266,7 +231,6 @@ export default function StudentDashboardPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Режим повторения */}
               <Link
                 href="/student/review/start"
                 className="bg-gradient-to-br from-orange-500 to-red-600 rounded-xl shadow-lg p-6 hover:shadow-2xl transition transform hover:scale-105"
@@ -286,7 +250,6 @@ export default function StudentDashboardPage() {
                 </div>
               </Link>
 
-              {/* Обычные наборы */}
               {decks.slice(0, 5).map((deck) => (
                 <Link
                   key={deck.id}

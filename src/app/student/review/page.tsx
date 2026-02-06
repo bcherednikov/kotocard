@@ -84,8 +84,16 @@ function ReviewPageContent() {
     if (!user || !cards[currentIndex]) return;
 
     const card = cards[currentIndex];
+    const newAnswers = [...answers, { cardId: card.id, isCorrect }];
 
-    setAnswers(prev => [...prev, { cardId: card.id, isCorrect }]);
+    setAnswers(newAnswers);
+
+    // Сохранять прогресс после каждого ответа
+    if (currentIndex < cards.length - 1) {
+      saveAllProgress(newAnswers);
+    } else {
+      await saveAllProgress(newAnswers);
+    }
 
     const newStats = {
       correct: isCorrect ? sessionStats.correct + 1 : sessionStats.correct,
@@ -96,20 +104,14 @@ function ReviewPageContent() {
     // Переход к следующей карточке
     if (currentIndex < cards.length - 1) {
       setIsTransitioning(true);
-      
       setTimeout(() => {
         setCurrentIndex(currentIndex + 1);
         setIsFlipped(false);
-        
         setTimeout(() => {
           setIsTransitioning(false);
         }, 50);
       }, 150);
     } else {
-      // Сохранить прогресс
-      await saveAllProgress([...answers, { cardId: card.id, isCorrect }]);
-      
-      // Редирект на результаты
       router.push(`/student/review/complete?correct=${newStats.correct}&incorrect=${newStats.incorrect}&total=${cards.length}`);
     }
   }
