@@ -33,6 +33,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# piper-tts venv (symlinks break Next/Turbopack build)
+piper-tts/venv
+
 # vercel
 .vercel
 

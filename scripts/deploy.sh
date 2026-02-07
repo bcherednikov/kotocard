@@ -11,7 +11,7 @@ SSH_OPTS="-o ControlMaster=auto -o ControlPath=/tmp/ssh-kotocard-%r@%h:%p -o Con
 
 echo "📦 Синхронизация файлов..."
 rsync -avz -e "ssh $SSH_OPTS" \
-  --exclude 'node_modules' --exclude '.next' --exclude '.git' --exclude '.env.local' \
+  --exclude 'node_modules' --exclude '.next' --exclude '.git' --exclude '.env.local' --exclude 'piper-tts/venv' \
   ./ "$REMOTE:$APP_DIR/"
 
 echo "🔨 Сборка и перезапуск на сервере..."
