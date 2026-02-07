@@ -259,7 +259,7 @@ export default function DeckDetailPage() {
               <h2 className="text-2xl font-bold text-gray-900 mb-2">
                 Карточки ({cards.length})
               </h2>
-              {ttsStats && (
+              {ttsStats && ttsStats.total > 0 && (
                 <div className="flex items-center gap-4 text-sm">
                   <span className="text-gray-700">
                     🔊 Аудио: {ttsStats.with_tts} из {ttsStats.total} ({ttsStats.percentage}%)
