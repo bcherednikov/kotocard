@@ -75,6 +75,7 @@ export async function POST(request: Request) {
       ).toISOString();
     }
 
+    // Test sessions (kept for historical data)
     let sessionsQuery = supabaseAdmin
       .from('test_sessions')
       .select('*')
@@ -89,21 +90,26 @@ export async function POST(request: Request) {
     const { data: sessions, error: sessionsError } = await sessionsQuery;
     if (sessionsError) throw sessionsError;
 
-    let cardsQuery = supabaseAdmin
-      .from('card_progress')
-      .select('card_id')
-      .eq('user_id', childId)
-      .gt('times_shown', 0);
+    // SRS stats from user_cards
+    const { data: userCards, error: ucError } = await supabaseAdmin
+      .from('user_cards')
+      .select('status')
+      .eq('user_id', childId);
 
-    if (dateFilter) {
-      cardsQuery = cardsQuery.gte('last_reviewed_at', dateFilter);
+    if (ucError) throw ucError;
+
+    const statusCounts: Record<string, number> = {
+      new: 0, learning: 0, testing: 0, young: 0, mature: 0, relearning: 0,
+    };
+    for (const uc of userCards ?? []) {
+      if (statusCounts[uc.status] !== undefined) {
+        statusCounts[uc.status]++;
+      }
     }
 
-    const { data: cardsData, error: cardsError } = await cardsQuery;
-    if (cardsError) throw cardsError;
-
-    const uniqueCards = new Set((cardsData || []).map((c) => c.card_id));
-    const studiedCardsCount = uniqueCards.size;
+    const totalCards = (userCards ?? []).length;
+    const masteredCount = statusCounts.young + statusCounts.mature;
+    const masteryPercent = totalCards === 0 ? 0 : Math.round((masteredCount / totalCards) * 100);
 
     const totalTests = (sessions || []).length;
     const totalCorrect = (sessions || []).reduce(
@@ -121,7 +127,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       childName: childProfile.display_name,
-      studiedCardsCount,
+      studiedCardsCount: masteredCount,
+      totalCardsCount: totalCards,
+      masteryPercent,
+      statusCounts,
       sessions: sessions || [],
       totalTests,
       totalCorrect,

@@ -4,25 +4,28 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import Link from 'next/link';
+import { getDecksSrsStats, getReviewCount } from '@/lib/srs/queries';
+import { DeckSrsProgress } from '@/components/student/DeckSrsProgress';
+import type { DeckSrsStats } from '@/lib/srs/types';
 
 type Deck = {
   id: string;
   name: string;
   description: string | null;
   tags: string[];
-  _count?: number;
 };
+
+type DeckWithStats = Deck & { stats: DeckSrsStats };
 
 export default function StudentDecksPage() {
   const { profile } = useAuth();
-  const [decks, setDecks] = useState<Deck[]>([]);
+  const [decks, setDecks] = useState<DeckWithStats[]>([]);
+  const [reviewReady, setReviewReady] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (profile) {
-      loadDecks();
-    }
+    if (profile) loadDecks();
   }, [profile]);
 
   async function loadDecks() {
@@ -37,24 +40,32 @@ export default function StudentDecksPage() {
 
       if (decksError) throw decksError;
 
-      const decksWithCount = await Promise.all(
-        (decksData || []).map(async (deck) => {
-          const { count } = await supabase
-            .from('cards')
-            .select('*', { count: 'exact', head: true })
-            .eq('deck_id', deck.id);
+      if (!decksData?.length) {
+        setDecks([]);
+        setError(null);
+        setLoading(false);
+        return;
+      }
 
-          return {
-            ...deck,
-            _count: count || 0
-          };
-        })
-      );
+      const [statsMap, reviewCount] = await Promise.all([
+        getDecksSrsStats(supabase, profile.id, decksData.map((d) => d.id)),
+        getReviewCount(supabase, profile.id),
+      ]);
 
-      setDecks(decksWithCount);
+      const decksWithStats = decksData.map((deck) => ({
+        ...deck,
+        stats: statsMap.get(deck.id) ?? {
+          total: 0, newCount: 0, learningCount: 0, testingCount: 0,
+          youngCount: 0, matureCount: 0, relearningCount: 0,
+          masteredCount: 0, masteryPercent: 0, readyForReview: 0, readyForTesting: 0,
+        },
+      }));
+
+      setDecks(decksWithStats);
+      setReviewReady(reviewCount);
       setError(null);
     } catch (err: any) {
-      console.error('Ошибка загрузки наборов:', err);
+      console.error('Error loading decks:', err);
       setError(err.message || 'Ошибка загрузки');
     } finally {
       setLoading(false);
@@ -112,31 +123,29 @@ export default function StudentDecksPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Link
-              href="/student/review/start"
-              className="bg-gradient-to-br from-orange-500 to-red-600 rounded-xl shadow-lg p-6 hover:shadow-2xl transition transform hover:scale-105 border-4 border-yellow-400"
-            >
-              <div className="text-white">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="text-3xl">🔄</div>
-                  <h3 className="text-2xl font-bold">
-                    Режим повторения
-                  </h3>
-                </div>
-                <p className="text-orange-100 text-sm mb-4">
-                  50 случайных карточек из всех твоих изученных наборов
-                </p>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">🎲</span>
-                    <span className="text-lg font-semibold">
-                      Микс из всех наборов
-                    </span>
+            {/* Global review card */}
+            {reviewReady > 0 && (
+              <Link
+                href="/student/review"
+                className="bg-gradient-to-br from-orange-500 to-red-600 rounded-xl shadow-lg p-6 hover:shadow-2xl transition transform hover:scale-105 border-4 border-yellow-400"
+              >
+                <div className="text-white">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="text-3xl">🔄</div>
+                    <h3 className="text-2xl font-bold">Повторение</h3>
                   </div>
-                  <div className="text-2xl">→</div>
+                  <p className="text-orange-100 text-sm mb-4">
+                    Карточки из всех наборов, которые пора повторить
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg font-semibold">
+                      {reviewReady} к повторению
+                    </span>
+                    <div className="text-2xl">→</div>
+                  </div>
                 </div>
-              </div>
-            </Link>
+              </Link>
+            )}
 
             {decks.map((deck) => (
               <Link
@@ -145,23 +154,21 @@ export default function StudentDecksPage() {
                 className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-lg p-6 hover:shadow-2xl transition transform hover:scale-105"
               >
                 <div className="text-white">
-                  <h3 className="text-2xl font-bold mb-3">
-                    {deck.name}
-                  </h3>
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="text-2xl font-bold flex-1">{deck.name}</h3>
+                    <span className="text-2xl">→</span>
+                  </div>
                   {deck.description && (
                     <p className="text-blue-100 text-sm mb-4 line-clamp-2">
                       {deck.description}
                     </p>
                   )}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-3xl">📝</span>
-                      <span className="text-lg font-semibold">
-                        {deck._count} {deck._count === 1 ? 'карточка' : 'карточек'}
-                      </span>
+                  <DeckSrsProgress stats={deck.stats} variant="onDark" />
+                  {deck.stats.readyForReview > 0 && (
+                    <div className="mt-2 inline-block px-2 py-1 bg-yellow-400 text-yellow-900 rounded text-xs font-semibold">
+                      🔄 {deck.stats.readyForReview} к повторению
                     </div>
-                    <div className="text-2xl">→</div>
-                  </div>
+                  )}
                 </div>
               </Link>
             ))}

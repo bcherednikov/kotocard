@@ -1,175 +1,83 @@
 'use client';
 
-import { Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { getSimpleReviewCards, updateUserCard } from '@/lib/srs/queries';
+import { handleSimpleReviewKnow, handleSimpleReviewDontKnow } from '@/lib/srs/engine';
+import type { UserCardWithCard } from '@/lib/srs/types';
 
-type Card = {
-  id: string;
-  ru_text: string;
-  en_text: string;
-  ru_transcription: string | null;
-  deck_id: string;
-};
-
-type Direction = 'ru_to_en' | 'en_to_ru';
-
-function ReviewPageContent() {
+export default function GlobalReviewPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const { user, profile } = useAuth();
+  const { profile } = useAuth();
 
-  const direction = (searchParams.get('direction') || 'ru_to_en') as Direction;
-
-  const [cards, setCards] = useState<Card[]>([]);
+  const [cards, setCards] = useState<UserCardWithCard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [sessionStats, setSessionStats] = useState({
-    correct: 0,
-    incorrect: 0
-  });
-  const [answers, setAnswers] = useState<Array<{ cardId: string; isCorrect: boolean }>>([]);
+  const [sessionStats, setSessionStats] = useState({ know: 0, dontKnow: 0 });
 
   useEffect(() => {
-    if (user && profile) {
-      loadReviewCards();
+    if (profile) {
+      loadCards();
     }
-  }, [user, profile]);
+  }, [profile]);
 
-  async function loadReviewCards() {
+  async function loadCards() {
+    if (!profile) return;
     try {
-      // 1. Загрузить все изученные карточки (где есть прогресс)
-      const { data: progress, error: progressError } = await supabase
-        .from('card_progress')
-        .select('card_id')
-        .eq('user_id', user!.id)
-        .gt('times_shown', 0);
-
-      if (progressError) throw progressError;
-
-      if (!progress || progress.length === 0) {
-        alert('У тебя пока нет изученных карточек! Начни с раздела "Мои наборы".');
-        router.push('/student/decks');
-        return;
-      }
-
-      const cardIds = progress.map(p => p.card_id);
-
-      // 2. Загрузить карточки
-      const { data: allCards, error: cardsError } = await supabase
-        .from('cards')
-        .select('*')
-        .in('id', cardIds);
-
-      if (cardsError) throw cardsError;
-
-      // 3. Перемешать и взять 50 (или меньше если нет 50)
-      const shuffled = (allCards || []).sort(() => Math.random() - 0.5);
-      const selected = shuffled.slice(0, Math.min(50, shuffled.length));
-
-      setCards(selected);
+      const data = await getSimpleReviewCards(supabase, profile.id, undefined, 10);
+      setCards(data);
     } catch (err) {
-      console.error('Ошибка загрузки карточек для повторения:', err);
+      console.error('Error loading review cards:', err);
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleAnswer(isCorrect: boolean) {
-    if (!user || !cards[currentIndex]) return;
+  async function handleAnswer(isKnow: boolean) {
+    if (!profile || !cards[currentIndex]) return;
 
     const card = cards[currentIndex];
-    const newAnswers = [...answers, { cardId: card.id, isCorrect }];
+    const updates = isKnow
+      ? handleSimpleReviewKnow(card)
+      : handleSimpleReviewDontKnow(card);
 
-    setAnswers(newAnswers);
-
-    // Сохранять прогресс после каждого ответа
-    if (currentIndex < cards.length - 1) {
-      saveAllProgress(newAnswers);
-    } else {
-      await saveAllProgress(newAnswers);
+    try {
+      await updateUserCard(supabase, card.user_card_id, updates);
+    } catch (err) {
+      console.error('Error saving progress:', err);
     }
 
-    const newStats = {
-      correct: isCorrect ? sessionStats.correct + 1 : sessionStats.correct,
-      incorrect: !isCorrect ? sessionStats.incorrect + 1 : sessionStats.incorrect
-    };
-    setSessionStats(newStats);
+    setSessionStats({
+      know: isKnow ? sessionStats.know + 1 : sessionStats.know,
+      dontKnow: !isKnow ? sessionStats.dontKnow + 1 : sessionStats.dontKnow,
+    });
 
-    // Переход к следующей карточке
     if (currentIndex < cards.length - 1) {
       setIsTransitioning(true);
       setTimeout(() => {
         setCurrentIndex(currentIndex + 1);
         setIsFlipped(false);
-        setTimeout(() => {
-          setIsTransitioning(false);
-        }, 50);
+        setTimeout(() => setIsTransitioning(false), 50);
       }, 150);
     } else {
-      router.push(`/student/review/complete?correct=${newStats.correct}&incorrect=${newStats.incorrect}&total=${cards.length}`);
+      const finalKnow = sessionStats.know + (isKnow ? 1 : 0);
+      const finalDontKnow = sessionStats.dontKnow + (!isKnow ? 1 : 0);
+      router.push(`/student/review/complete?correct=${finalKnow}&incorrect=${finalDontKnow}&total=${cards.length}`);
     }
   }
 
-  async function saveAllProgress(allAnswers: Array<{ cardId: string; isCorrect: boolean }>) {
-    if (!user) return;
-
+  async function speakText(text: string, lang: 'en' | 'ru') {
     try {
-      for (const answer of allAnswers) {
-        const { data: existing } = await supabase
-          .from('card_progress')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('card_id', answer.cardId)
-          .eq('direction', direction)
-          .maybeSingle();
-
-        if (existing) {
-          await supabase
-            .from('card_progress')
-            .update({
-              times_shown: existing.times_shown + 1,
-              times_correct: answer.isCorrect ? existing.times_correct + 1 : existing.times_correct,
-              times_incorrect: !answer.isCorrect ? existing.times_incorrect + 1 : existing.times_incorrect,
-              last_reviewed_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', existing.id);
-        } else {
-          await supabase
-            .from('card_progress')
-            .insert({
-              user_id: user.id,
-              card_id: answer.cardId,
-              direction,
-              times_shown: 1,
-              times_correct: answer.isCorrect ? 1 : 0,
-              times_incorrect: !answer.isCorrect ? 1 : 0,
-              last_reviewed_at: new Date().toISOString()
-            });
-        }
-      }
-    } catch (err) {
-      console.error('Ошибка сохранения прогресса:', err);
+      const { playTts } = await import('@/lib/tts/playTts');
+      await playTts(text, lang);
+    } catch (e) {
+      console.error('TTS:', e);
     }
-  }
-
-  function handleFlip() {
-    setIsFlipped(!isFlipped);
-  }
-
-  function speakText(text: string, lang: 'en' | 'ru') {
-    if (!('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = lang === 'en' ? 'en-US' : 'ru-RU';
-    utterance.rate = 0.9;
-    window.speechSynthesis.speak(utterance);
   }
 
   if (loading) {
@@ -184,16 +92,16 @@ function ReviewPageContent() {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center">
-          <div className="text-6xl mb-4">📚</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Нет карточек для повторения</h1>
+          <div className="text-6xl mb-4">😕</div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Нет изученных карточек</h1>
           <p className="text-gray-700 mb-6">
-            Сначала поучи карточки в разделе "Мои наборы"
+            Сначала изучи карточки в наборах и отметь «Знаю»
           </p>
           <Link
             href="/student/decks"
             className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
           >
-            Перейти к обучению
+            Перейти к наборам
           </Link>
         </div>
       </div>
@@ -201,98 +109,75 @@ function ReviewPageContent() {
   }
 
   const currentCard = cards[currentIndex];
-  const frontText = direction === 'ru_to_en' ? currentCard.ru_text : currentCard.en_text;
-  const backText = direction === 'ru_to_en' ? currentCard.en_text : currentCard.ru_text;
-  const frontFlag = direction === 'ru_to_en' ? '🇷🇺' : '🇬🇧';
-  const backFlag = direction === 'ru_to_en' ? '🇬🇧' : '🇷🇺';
-  
-  const showTranscriptionOnFront = profile?.show_russian_transcription && 
-                                   direction === 'en_to_ru' && 
-                                   currentCard.ru_transcription;
-  
-  const showTranscriptionOnBack = profile?.show_russian_transcription && 
-                                  direction === 'ru_to_en' && 
-                                  currentCard.ru_transcription;
+  const cardData = currentCard.cards;
+  const frontText = cardData.ru_text;
+  const backText = cardData.en_text;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-100 via-teal-100 to-blue-100 py-8 px-4">
       <div className="max-w-2xl mx-auto">
-        {/* Прогресс */}
+        {/* Progress header */}
         <div className="flex justify-between items-center mb-6">
           <Link
-            href="/student/decks"
+            href="/student"
             className="px-4 py-2 bg-white rounded-lg shadow text-gray-700 hover:bg-gray-50 font-medium"
           >
             ← Выход
           </Link>
-          <div className="text-sm font-medium text-gray-700">
-            Карточка {currentIndex + 1} из {cards.length}
-          </div>
-          <div className="flex gap-2">
-            <span className="px-3 py-1 bg-green-500 text-white rounded-full text-sm font-semibold">
-              ✓ {sessionStats.correct}
-            </span>
-            <span className="px-3 py-1 bg-red-500 text-white rounded-full text-sm font-semibold">
-              ✗ {sessionStats.incorrect}
-            </span>
+          <div className="flex items-center gap-4">
+            <div className="text-sm font-medium text-gray-700">
+              {currentIndex + 1} из {cards.length}
+            </div>
+            <div className="flex gap-2">
+              <span className="px-3 py-1 bg-green-500 text-white rounded-full text-sm font-semibold">
+                ✓ {sessionStats.know}
+              </span>
+              <span className="px-3 py-1 bg-red-500 text-white rounded-full text-sm font-semibold">
+                ✗ {sessionStats.dontKnow}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Прогресс-бар */}
+        {/* Progress bar */}
         <div className="w-full h-2 bg-white/50 rounded-full mb-8 overflow-hidden">
-          <div 
-            className="h-full bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-300"
+          <div
+            className="h-full bg-gradient-to-r from-green-500 to-teal-600 transition-all duration-300"
             style={{ width: `${((currentIndex + 1) / cards.length) * 100}%` }}
           />
         </div>
 
-        {/* Карточка */}
-        <div 
+        {/* Card */}
+        <div
           className={`relative mb-8 ${!isFlipped ? 'cursor-pointer' : ''} transition-opacity duration-200`}
-          style={{ 
-            perspective: '1000px', 
+          style={{
+            perspective: '1000px',
             height: '400px',
-            opacity: isTransitioning ? 0 : 1
+            opacity: isTransitioning ? 0 : 1,
           }}
-          onClick={!isFlipped ? handleFlip : undefined}
+          onClick={!isFlipped ? () => setIsFlipped(true) : undefined}
         >
-          <div 
-            className={`relative w-full h-full transition-transform duration-500 transform-style-3d ${
-              isFlipped ? 'rotate-y-180' : ''
-            }`}
+          <div
+            className="relative w-full h-full transition-transform duration-500"
             style={{
               transformStyle: 'preserve-3d',
-              transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
+              transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
             }}
           >
-            {/* Передняя сторона */}
-            <div 
-              className="absolute w-full h-full backface-hidden"
+            {/* Front: RU word */}
+            <div
+              className="absolute w-full h-full"
               style={{ backfaceVisibility: 'hidden' }}
             >
               <div className="bg-white rounded-2xl shadow-2xl p-12 h-full flex flex-col justify-center">
                 <div className="text-center">
-                  <div className="text-6xl mb-6">{frontFlag}</div>
-                  <div className="flex items-center justify-center gap-4 mb-3">
-                    <p className="text-5xl font-bold text-gray-900">
-                      {frontText}
-                    </p>
-                    {direction === 'en_to_ru' && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          speakText(frontText, 'en');
-                        }}
-                        className="text-4xl hover:scale-110 transition-transform active:scale-95"
-                        title="Прослушать"
-                      >
-                        🔊
-                      </button>
-                    )}
-                  </div>
-                  {showTranscriptionOnFront && (
+                  <div className="text-6xl mb-6">🇷🇺</div>
+                  <p className="text-5xl font-bold text-gray-900 mb-3">
+                    {frontText}
+                  </p>
+                  {cardData.ru_transcription && (
                     <p className="text-xl text-blue-600 mb-8 italic">
-                      [{currentCard.ru_transcription}]
+                      [{cardData.ru_transcription}]
                     </p>
                   )}
                   <p className="text-gray-600 text-lg mt-8">
@@ -302,43 +187,34 @@ function ReviewPageContent() {
               </div>
             </div>
 
-            {/* Задняя сторона */}
-            <div 
-              className="absolute w-full h-full backface-hidden"
-              style={{ 
+            {/* Back: EN translation */}
+            <div
+              className="absolute w-full h-full"
+              style={{
                 backfaceVisibility: 'hidden',
-                transform: 'rotateY(180deg)'
+                transform: 'rotateY(180deg)',
               }}
             >
-              <div className="bg-gradient-to-br from-green-500 to-blue-600 rounded-2xl shadow-2xl p-12 h-full flex flex-col justify-center">
+              <div className="bg-gradient-to-br from-green-500 to-teal-600 rounded-2xl shadow-2xl p-12 h-full flex flex-col justify-center">
                 <div className="text-center text-white">
-                  <div className="text-6xl mb-6">{backFlag}</div>
+                  <div className="text-6xl mb-6">🇬🇧</div>
                   <div className="flex items-center justify-center gap-4 mb-3">
-                    <p className="text-5xl font-bold">
-                      {backText}
-                    </p>
-                    {direction === 'ru_to_en' && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          speakText(backText, 'en');
-                        }}
-                        className="text-4xl hover:scale-110 transition-transform active:scale-95"
-                        title="Прослушать"
-                      >
-                        🔊
-                      </button>
-                    )}
+                    <p className="text-5xl font-bold">{backText}</p>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        speakText(backText, 'en');
+                      }}
+                      className="text-4xl hover:scale-110 transition-transform active:scale-95"
+                      title="Прослушать"
+                    >
+                      🔊
+                    </button>
                   </div>
-                  {showTranscriptionOnBack && (
-                    <p className="text-xl text-yellow-200 mb-8 italic">
-                      [{currentCard.ru_transcription}]
-                    </p>
-                  )}
                   <div className="mt-8 pt-6 border-t-2 border-white/30">
                     <p className="text-sm text-green-100 mb-2">Перевод:</p>
                     <p className="text-2xl text-white font-medium">
-                      {frontFlag} {frontText}
+                      🇷🇺 {frontText}
                     </p>
                   </div>
                 </div>
@@ -347,7 +223,7 @@ function ReviewPageContent() {
           </div>
         </div>
 
-        {/* Кнопки ответа */}
+        {/* Answer buttons */}
         {isFlipped && (
           <div className="grid grid-cols-2 gap-4">
             <button
@@ -367,24 +243,10 @@ function ReviewPageContent() {
 
         {!isFlipped && (
           <div className="text-center text-gray-600">
-            <p className="text-lg">
-              Подумай над ответом, затем нажми на карточку
-            </p>
+            <p className="text-lg">Вспомни перевод, затем нажми на карточку</p>
           </div>
         )}
       </div>
     </div>
-  );
-}
-
-export default function ReviewPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-xl text-gray-800">Загрузка...</p>
-      </div>
-    }>
-      <ReviewPageContent />
-    </Suspense>
   );
 }

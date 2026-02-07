@@ -5,14 +5,14 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getStudyCards, updateUserCard, ensureUserCardsExist } from '@/lib/srs/queries';
-import { handleMarkKnow, handleMarkDontKnow } from '@/lib/srs/engine';
+import { getSimpleReviewCards, updateUserCard } from '@/lib/srs/queries';
+import { handleSimpleReviewKnow, handleSimpleReviewDontKnow } from '@/lib/srs/engine';
 import type { UserCardWithCard } from '@/lib/srs/types';
 
-export default function StudyPage() {
+export default function DeckReviewPage() {
   const params = useParams();
   const router = useRouter();
-  const { user, profile } = useAuth();
+  const { profile } = useAuth();
 
   const deckId = params.id as string;
 
@@ -32,23 +32,22 @@ export default function StudyPage() {
   async function loadCards() {
     if (!profile) return;
     try {
-      await ensureUserCardsExist(supabase, profile.id, deckId);
-      const data = await getStudyCards(supabase, profile.id, deckId);
-      // Shuffle for variety
-      const shuffled = [...data].sort(() => Math.random() - 0.5);
-      setCards(shuffled);
+      const data = await getSimpleReviewCards(supabase, profile.id, deckId, 10);
+      setCards(data);
     } catch (err) {
-      console.error('Error loading study cards:', err);
+      console.error('Error loading review cards:', err);
     } finally {
       setLoading(false);
     }
   }
 
   async function handleAnswer(isKnow: boolean) {
-    if (!user || !cards[currentIndex]) return;
+    if (!profile || !cards[currentIndex]) return;
 
     const card = cards[currentIndex];
-    const updates = isKnow ? handleMarkKnow(card) : handleMarkDontKnow(card);
+    const updates = isKnow
+      ? handleSimpleReviewKnow(card)
+      : handleSimpleReviewDontKnow(card);
 
     try {
       await updateUserCard(supabase, card.user_card_id, updates);
@@ -85,7 +84,7 @@ export default function StudyPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-xl text-gray-800">Загрузка карточек...</p>
+        <p className="text-xl text-gray-800">Загрузка повторения...</p>
       </div>
     );
   }
@@ -95,8 +94,8 @@ export default function StudyPage() {
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center">
           <div className="text-6xl mb-4">😕</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Нет карточек</h1>
-          <p className="text-gray-700 mb-6">В этом наборе пока нет карточек</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Нет изученных карточек</h1>
+          <p className="text-gray-700 mb-6">Сначала изучи карточки и отметь «Знаю»</p>
           <Link
             href={`/student/decks/${deckId}`}
             className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
@@ -110,13 +109,11 @@ export default function StudyPage() {
 
   const currentCard = cards[currentIndex];
   const cardData = currentCard.cards;
-
-  // Front: RU word, Back: EN translation
   const frontText = cardData.ru_text;
   const backText = cardData.en_text;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-100 via-teal-100 to-blue-100 py-8 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Progress header */}
         <div className="flex justify-between items-center mb-6">
@@ -144,7 +141,7 @@ export default function StudyPage() {
         {/* Progress bar */}
         <div className="w-full h-2 bg-white/50 rounded-full mb-8 overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-300"
+            className="h-full bg-gradient-to-r from-green-500 to-teal-600 transition-all duration-300"
             style={{ width: `${((currentIndex + 1) / cards.length) * 100}%` }}
           />
         </div>
@@ -197,7 +194,7 @@ export default function StudyPage() {
                 transform: 'rotateY(180deg)',
               }}
             >
-              <div className="bg-gradient-to-br from-green-500 to-blue-600 rounded-2xl shadow-2xl p-12 h-full flex flex-col justify-center">
+              <div className="bg-gradient-to-br from-green-500 to-teal-600 rounded-2xl shadow-2xl p-12 h-full flex flex-col justify-center">
                 <div className="text-center text-white">
                   <div className="text-6xl mb-6">🇬🇧</div>
                   <div className="flex items-center justify-center gap-4 mb-3">
@@ -245,7 +242,7 @@ export default function StudyPage() {
 
         {!isFlipped && (
           <div className="text-center text-gray-600">
-            <p className="text-lg">Подумай над ответом, затем нажми на карточку</p>
+            <p className="text-lg">Вспомни перевод, затем нажми на карточку</p>
           </div>
         )}
       </div>

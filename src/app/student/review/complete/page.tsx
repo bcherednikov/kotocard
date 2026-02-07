@@ -9,17 +9,16 @@ function ReviewCompleteContent() {
 
   const correct = parseInt(searchParams.get('correct') || '0');
   const incorrect = parseInt(searchParams.get('incorrect') || '0');
-  const total = parseInt(searchParams.get('total') || '50');
+  const total = parseInt(searchParams.get('total') || '0') || (correct + incorrect);
 
-  const percentage = Math.round((correct / total) * 100);
-  const isPerfect = correct === total;
+  const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
+  const isPerfect = correct === total && total > 0;
   const isGood = percentage >= 70;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-100 via-teal-100 to-blue-100 flex items-center justify-center px-4">
       <div className="max-w-2xl w-full">
         <div className="bg-white rounded-2xl shadow-2xl p-12 text-center">
-          {/* Результат */}
           <div className="text-8xl mb-6">
             {isPerfect ? '🏆' : isGood ? '🎉' : '💪'}
           </div>
@@ -27,19 +26,18 @@ function ReviewCompleteContent() {
             {isPerfect ? 'Идеально!' : isGood ? 'Отлично!' : 'Хорошая работа!'}
           </h1>
           <p className="text-xl text-gray-700 mb-8">
-            Ты завершил режим повторения!
+            Повторение завершено!
           </p>
 
-          {/* Статистика */}
           <div className="flex justify-center gap-8 mb-8">
             <div>
               <div className="text-5xl font-bold text-green-600">{correct}</div>
-              <div className="text-gray-700">Знаю</div>
+              <div className="text-gray-700">Правильно</div>
             </div>
             <div className="text-4xl text-gray-400">/</div>
             <div>
               <div className="text-5xl font-bold text-red-600">{incorrect}</div>
-              <div className="text-gray-700">Не знаю</div>
+              <div className="text-gray-700">Ошибки</div>
             </div>
             <div className="text-4xl text-gray-400">/</div>
             <div>
@@ -48,7 +46,6 @@ function ReviewCompleteContent() {
             </div>
           </div>
 
-          {/* Прогресс бар */}
           <div className="mb-8">
             <div className="text-3xl font-bold text-purple-600 mb-2">{percentage}%</div>
             <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
@@ -63,39 +60,27 @@ function ReviewCompleteContent() {
             </div>
           </div>
 
-          {/* Кнопки */}
+          {!isGood && (
+            <p className="text-gray-600 mb-6">
+              Ошибочные карточки вернулись в режим изучения. Повтори их позже!
+            </p>
+          )}
+
           <div className="flex gap-4">
             <Link
-              href="/student/review/start"
-              className="flex-1 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-bold text-lg hover:from-blue-600 hover:to-purple-700 transition shadow-lg"
+              href="/student/review"
+              className="flex-1 py-4 bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-xl font-bold text-lg hover:from-green-600 hover:to-teal-700 transition shadow-lg"
             >
-              Повторить ещё раз
+              Повторить ещё
             </Link>
             <Link
-              href="/student/decks"
+              href="/student"
               className="flex-1 py-4 border-2 border-gray-300 text-gray-700 rounded-xl font-bold text-lg hover:bg-gray-50 transition"
             >
-              К наборам
+              На главную
             </Link>
           </div>
         </div>
-
-        {/* Мотивация */}
-        {percentage < 100 && (
-          <div className="mt-6 bg-orange-50 border border-orange-200 rounded-xl p-4 text-center">
-            <p className="text-orange-800">
-              💡 Повтори ещё раз, чтобы улучшить результат!
-            </p>
-          </div>
-        )}
-
-        {isPerfect && (
-          <div className="mt-6 bg-green-50 border border-green-200 rounded-xl p-4 text-center">
-            <p className="text-green-800 font-semibold">
-              🌟 Невероятно! Ты знаешь все слова идеально!
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -104,7 +89,7 @@ function ReviewCompleteContent() {
 export default function ReviewCompletePage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-green-100 via-teal-100 to-blue-100 flex items-center justify-center">
         <p className="text-gray-600">Загрузка...</p>
       </div>
     }>

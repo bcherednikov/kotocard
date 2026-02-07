@@ -127,29 +127,23 @@ export function Header() {
                 {/* Навигация для студента */}
                 {profile?.role === 'student' && (
                   <>
-                    <Link 
-                      href="/student" 
+                    <Link
+                      href="/student"
                       className="text-gray-700 hover:text-gray-900 transition font-medium"
                     >
                       🏠 Главная
                     </Link>
-                    <Link 
-                      href="/student/decks" 
+                    <Link
+                      href="/student/decks"
                       className="text-gray-700 hover:text-gray-900 transition font-medium"
                     >
                       📚 Наборы
                     </Link>
-                    <Link 
-                      href="/student/test" 
+                    <Link
+                      href="/student/review"
                       className="text-gray-700 hover:text-gray-900 transition font-medium"
                     >
-                      🎯 Проверка
-                    </Link>
-                    <Link 
-                      href="/student/test/history" 
-                      className="text-gray-700 hover:text-gray-900 transition font-medium"
-                    >
-                      📊 Результаты
+                      🔄 Повторение
                     </Link>
                   </>
                 )}
@@ -228,33 +222,26 @@ export function Header() {
                 {/* Навигация для студента */}
                 {profile?.role === 'student' && (
                   <>
-                    <Link 
-                      href="/student" 
+                    <Link
+                      href="/student"
                       className="block px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition font-medium"
                       onClick={closeMobileMenu}
                     >
                       🏠 Главная
                     </Link>
-                    <Link 
-                      href="/student/decks" 
+                    <Link
+                      href="/student/decks"
                       className="block px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition font-medium"
                       onClick={closeMobileMenu}
                     >
                       📚 Наборы
                     </Link>
-                    <Link 
-                      href="/student/test" 
+                    <Link
+                      href="/student/review"
                       className="block px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition font-medium"
                       onClick={closeMobileMenu}
                     >
-                      🎯 Проверка
-                    </Link>
-                    <Link 
-                      href="/student/test/history" 
-                      className="block px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition font-medium"
-                      onClick={closeMobileMenu}
-                    >
-                      📊 Результаты
+                      🔄 Повторение
                     </Link>
                   </>
                 )}

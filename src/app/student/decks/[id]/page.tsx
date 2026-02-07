@@ -3,8 +3,11 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { ensureUserCardsExist, getDeckSrsStats } from '@/lib/srs/queries';
+import { DeckSrsProgress } from '@/components/student/DeckSrsProgress';
+import type { DeckSrsStats } from '@/lib/srs/types';
 
 type Deck = {
   id: string;
@@ -15,23 +18,23 @@ type Deck = {
 
 export default function StudentDeckPage() {
   const params = useParams();
-  const router = useRouter();
   const { profile } = useAuth();
   const [deck, setDeck] = useState<Deck | null>(null);
-  const [cardsCount, setCardsCount] = useState(0);
+  const [stats, setStats] = useState<DeckSrsStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   const deckId = params.id as string;
 
   useEffect(() => {
     if (profile && deckId) {
-      loadDeck();
-      loadCardsCount();
+      loadAll();
     }
   }, [profile, deckId]);
 
-  async function loadDeck() {
+  async function loadAll() {
+    if (!profile) return;
     try {
+      // Load deck info
       const { data, error } = await supabase
         .from('decks')
         .select('*')
@@ -39,25 +42,18 @@ export default function StudentDeckPage() {
         .single();
 
       if (error) throw error;
-
       setDeck(data);
+
+      // Ensure user_cards exist for all cards in this deck
+      await ensureUserCardsExist(supabase, profile.id, deckId);
+
+      // Load SRS stats
+      const s = await getDeckSrsStats(supabase, profile.id, deckId);
+      setStats(s);
     } catch (err) {
-      console.error('Ошибка загрузки набора:', err);
+      console.error('Error loading deck:', err);
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function loadCardsCount() {
-    try {
-      const { count } = await supabase
-        .from('cards')
-        .select('*', { count: 'exact', head: true })
-        .eq('deck_id', deckId);
-
-      setCardsCount(count || 0);
-    } catch (err) {
-      console.error('Ошибка подсчёта карточек:', err);
     }
   }
 
@@ -84,10 +80,14 @@ export default function StudentDeckPage() {
     );
   }
 
+  const studyCount = stats?.total ?? 0;
+  const testCount = stats?.readyForTesting ?? 0;
+  const reviewCount = stats ? (stats.total - stats.newCount) : 0;
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
-        {/* Хлебные крошки */}
+        {/* Breadcrumbs */}
         <div className="mb-6">
           <Link
             href="/student/decks"
@@ -97,7 +97,7 @@ export default function StudentDeckPage() {
           </Link>
         </div>
 
-        {/* Карточка набора */}
+        {/* Deck header */}
         <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-2xl p-8 mb-8 text-white">
           <div className="text-center">
             <div className="text-6xl mb-4">📚</div>
@@ -109,17 +109,16 @@ export default function StudentDeckPage() {
                 {deck.description}
               </p>
             )}
-            <div className="inline-flex items-center gap-3 bg-white/20 backdrop-blur-sm rounded-full px-6 py-3">
-              <span className="text-2xl">📝</span>
-              <span className="text-xl font-semibold">
-                {cardsCount} {cardsCount === 1 ? 'карточка' : 'карточек'}
-              </span>
-            </div>
+            {stats && (
+              <div className="flex justify-center">
+                <DeckSrsProgress stats={stats} variant="onDark" />
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Режимы обучения */}
-        {cardsCount === 0 ? (
+        {/* Mode selection */}
+        {stats !== null && stats.total === 0 ? (
           <div className="bg-white rounded-xl shadow-lg p-12 text-center">
             <div className="text-6xl mb-4">😕</div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -130,41 +129,68 @@ export default function StudentDeckPage() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Режим: RU → EN */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Study */}
             <Link
-              href={`/student/decks/${deckId}/study?direction=ru_to_en`}
+              href={`/student/decks/${deckId}/study`}
               className="bg-white rounded-xl shadow-lg p-8 hover:shadow-2xl transition transform hover:scale-105"
             >
               <div className="text-center">
-                <div className="text-5xl mb-4">🇷🇺 → 🇬🇧</div>
+                <div className="text-5xl mb-4">📖</div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                  Русский → Английский
+                  Изучение
                 </h3>
                 <p className="text-gray-700 mb-4">
-                  Увидишь слово на русском, попробуй вспомнить перевод
+                  Просмотри карточки и отметь что знаешь
                 </p>
-                <div className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold">
-                  Начать учить →
+                <div className="inline-block px-4 py-2 bg-blue-100 text-blue-800 rounded-lg font-semibold text-sm">
+                  {studyCount} карт.
                 </div>
               </div>
             </Link>
 
-            {/* Режим: EN → RU */}
+            {/* Testing */}
             <Link
-              href={`/student/decks/${deckId}/study?direction=en_to_ru`}
-              className="bg-white rounded-xl shadow-lg p-8 hover:shadow-2xl transition transform hover:scale-105"
+              href={`/student/decks/${deckId}/test`}
+              className={`bg-white rounded-xl shadow-lg p-8 hover:shadow-2xl transition transform hover:scale-105 ${
+                testCount === 0 ? 'opacity-60' : ''
+              }`}
             >
               <div className="text-center">
-                <div className="text-5xl mb-4">🇬🇧 → 🇷🇺</div>
+                <div className="text-5xl mb-4">🎯</div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                  Английский → Русский
+                  Тестирование
                 </h3>
                 <p className="text-gray-700 mb-4">
-                  Увидишь слово на английском, попробуй вспомнить перевод
+                  Пройди 3 теста чтобы выучить слово
                 </p>
-                <div className="inline-block px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold">
-                  Начать учить →
+                <div className={`inline-block px-4 py-2 rounded-lg font-semibold text-sm ${
+                  testCount > 0 ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-500'
+                }`}>
+                  {testCount > 0 ? `${testCount} готово` : 'Нет карточек'}
+                </div>
+              </div>
+            </Link>
+
+            {/* Review */}
+            <Link
+              href={`/student/decks/${deckId}/review`}
+              className={`bg-white rounded-xl shadow-lg p-8 hover:shadow-2xl transition transform hover:scale-105 ${
+                reviewCount === 0 ? 'opacity-60' : ''
+              }`}
+            >
+              <div className="text-center">
+                <div className="text-5xl mb-4">🔄</div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                  Повторение
+                </h3>
+                <p className="text-gray-700 mb-4">
+                  Повтори 10 случайных изученных слов
+                </p>
+                <div className={`inline-block px-4 py-2 rounded-lg font-semibold text-sm ${
+                  reviewCount > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'
+                }`}>
+                  {reviewCount > 0 ? `${reviewCount} изучено` : 'Нет изученных'}
                 </div>
               </div>
             </Link>

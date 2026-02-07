@@ -1,0 +1,4 @@
+# Piper TTS — отдельная установка для KotoCard
+# Голоса не включены; скачать по необходимости: python -m piper.download_voices <имя>
+piper-tts[http]>=1.4.0
+pathvalidate>=2.0.0
