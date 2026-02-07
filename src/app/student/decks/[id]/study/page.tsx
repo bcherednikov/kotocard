@@ -205,7 +205,7 @@ export default function StudyPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        speakCard(card.card_id, 'en');
+                        speakCard(cards[currentIndex].card_id, 'en');
                       }}
                       className="text-4xl hover:scale-110 transition-transform active:scale-95"
                       title="Прослушать"
