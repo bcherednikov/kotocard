@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 import { generateAndSaveTts } from '@/lib/tts/tts-server';
 
 /**
@@ -12,7 +12,6 @@ export async function POST(
 ) {
   try {
     const cardId = params.id;
-    const supabase = createClient();
 
     // Получить данные карточки
     const { data: card, error: cardError } = await supabase

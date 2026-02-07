@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 import { generateAndSaveTts, ttsFileExists } from '@/lib/tts/tts-server';
 import fs from 'fs';
 import path from 'path';
@@ -18,8 +18,6 @@ export async function GET(
     const cardId = params.id;
     const { searchParams } = new URL(request.url);
     const lang = searchParams.get('lang') === 'ru' ? 'ru' : 'en';
-
-    const supabase = createClient();
 
     // Получить карточку с URL TTS
     const { data: card, error } = await supabase

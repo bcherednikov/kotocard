@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 import { generateAndSaveTts } from './tts-server';
 
 /**
@@ -8,8 +8,6 @@ export async function generateTtsForCards(
   cardIds: string[],
   options?: { immediate?: boolean }
 ): Promise<void> {
-  const supabase = createClient();
-
   // Получить данные карточек
   const { data: cards, error } = await supabase
     .from('cards')
