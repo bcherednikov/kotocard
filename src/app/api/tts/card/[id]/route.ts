@@ -12,10 +12,10 @@ const PUBLIC_DIR = path.join(process.cwd(), 'public');
  */
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const cardId = params.id;
+    const { id: cardId } = await params;
     const { searchParams } = new URL(request.url);
     const lang = searchParams.get('lang') === 'ru' ? 'ru' : 'en';
 

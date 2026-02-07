@@ -8,10 +8,10 @@ import { generateAndSaveTts } from '@/lib/tts/tts-server';
  */
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const cardId = params.id;
+    const { id: cardId } = await params;
 
     // Получить данные карточки
     const { data: card, error: cardError } = await supabase
