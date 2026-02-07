@@ -7,7 +7,7 @@ import { TTS_VOICE_BY_LANG, TTS_DEFAULT_SPEED_BY_LANG } from '@/lib/tts/config';
 
 const PROJECT_ROOT = process.cwd();
 const PIPER_DIR = path.join(PROJECT_ROOT, 'piper-tts');
-const PYTHON_PATH = path.join(PIPER_DIR, 'venv', 'bin', 'python');
+const PYTHON_PATH = path.join(PIPER_DIR, 'venv', 'bin', 'python3');
 const MAX_TEXT_LENGTH = 2000;
 
 type TtsLang = 'en' | 'ru';
