@@ -6,16 +6,16 @@ import type { DictationQuestion as DictationQuestionType } from '@/lib/srs/quest
 type Props = {
   question: DictationQuestionType;
   onAnswer: (answer: string, isCorrect: boolean) => void;
-  speakText: (text: string, lang: 'en' | 'ru') => void;
+  speakCard: (cardId: string, lang: 'en' | 'ru') => void;
 };
 
-export function DictationQuestion({ question, onAnswer, speakText }: Props) {
+export function DictationQuestion({ question, onAnswer, speakCard }: Props) {
   const [userInput, setUserInput] = useState('');
 
   // Auto-play audio on mount
   useEffect(() => {
-    speakText(question.audioText, 'en');
-  }, [question.audioText]);
+    speakCard(question.targetCard.id, 'en');
+  }, [question.targetCard.id]);
 
   // Reset input when question changes
   useEffect(() => {
@@ -36,7 +36,7 @@ export function DictationQuestion({ question, onAnswer, speakText }: Props) {
         <div className="text-center">
           <p className="text-xl text-gray-700 mb-6">Прослушай и напиши слово:</p>
           <button
-            onClick={() => speakText(question.audioText, 'en')}
+            onClick={() => speakCard(question.targetCard.id, 'en')}
             className="px-8 py-4 bg-blue-500 text-white rounded-xl text-2xl hover:bg-blue-600 transition active:scale-95"
           >
             🔊 Воспроизвести

@@ -71,10 +71,10 @@ export default function GlobalReviewPage() {
     }
   }
 
-  async function speakText(text: string, lang: 'en' | 'ru') {
+  async function speakCard(cardId: string, lang: 'en' | 'ru') {
     try {
-      const { playTts } = await import('@/lib/tts/playTts');
-      await playTts(text, lang);
+      const { playTtsForCard } = await import('@/lib/tts');
+      await playTtsForCard(cardId, lang);
     } catch (e) {
       console.error('TTS:', e);
     }
@@ -203,7 +203,7 @@ export default function GlobalReviewPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        speakText(backText, 'en');
+                        speakCard(card.card_id, 'en');
                       }}
                       className="text-4xl hover:scale-110 transition-transform active:scale-95"
                       title="Прослушать"

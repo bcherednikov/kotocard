@@ -5,10 +5,10 @@ import type { ChoiceQuestion as ChoiceQuestionType } from '@/lib/srs/question-ge
 type Props = {
   question: ChoiceQuestionType;
   onAnswer: (answer: string, isCorrect: boolean) => void;
-  speakText: (text: string, lang: 'en' | 'ru') => void;
+  speakCard: (cardId: string, lang: 'en' | 'ru') => void;
 };
 
-export function ChoiceQuestion({ question, onAnswer, speakText }: Props) {
+export function ChoiceQuestion({ question, onAnswer, speakCard }: Props) {
   return (
     <div>
       {/* Question display */}
@@ -18,7 +18,7 @@ export function ChoiceQuestion({ question, onAnswer, speakText }: Props) {
           <div className="flex items-center justify-center gap-4 mb-4">
             <p className="text-4xl font-bold text-gray-900">{question.questionText}</p>
             <button
-              onClick={() => speakText(question.questionText, 'en')}
+              onClick={() => speakCard(question.targetCard.id, 'en')}
               className="text-3xl hover:scale-110 transition-transform"
               title="Прослушать"
             >

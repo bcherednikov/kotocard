@@ -123,10 +123,10 @@ export default function PrimaryTestPage() {
     }
   }
 
-  async function speakText(text: string, lang: 'en' | 'ru') {
+  async function speakCard(cardId: string, lang: 'en' | 'ru') {
     try {
-      const { playTts } = await import('@/lib/tts/playTts');
-      await playTts(text, lang);
+      const { playTtsForCard } = await import('@/lib/tts');
+      await playTtsForCard(cardId, lang);
     } catch (e) {
       console.error('TTS:', e);
     }
@@ -202,13 +202,13 @@ export default function PrimaryTestPage() {
         {!showFeedback && currentQuestion && (
           <>
             {currentQuestion.type === 'choice' && (
-              <ChoiceQuestion question={currentQuestion} onAnswer={handleAnswer} speakText={speakText} />
+              <ChoiceQuestion question={currentQuestion} onAnswer={handleAnswer} speakCard={speakCard} />
             )}
             {currentQuestion.type === 'audio' && (
-              <AudioQuestion question={currentQuestion} onAnswer={handleAnswer} speakText={speakText} />
+              <AudioQuestion question={currentQuestion} onAnswer={handleAnswer} speakCard={speakCard} />
             )}
             {currentQuestion.type === 'dictation' && (
-              <DictationQuestion question={currentQuestion} onAnswer={handleAnswer} speakText={speakText} />
+              <DictationQuestion question={currentQuestion} onAnswer={handleAnswer} speakCard={speakCard} />
             )}
           </>
         )}
