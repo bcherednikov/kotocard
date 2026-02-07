@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import translate from 'translate';
+import { generateTtsForCards } from '@/lib/tts/generate-background';
 
 // Настройка translate (использовать Google по умолчанию)
 translate.engine = 'google';
@@ -97,6 +98,14 @@ export async function POST(request: Request) {
       } catch (err: any) {
         errors.push({ word: sourceText, error: err.message });
       }
+    }
+
+    // Запустить фоновую генерацию TTS для созданных карточек
+    if (createdCards.length > 0) {
+      const cardIds = createdCards.map((card) => card.id);
+      generateTtsForCards(cardIds).catch((err) =>
+        console.error('Background TTS generation failed:', err)
+      );
     }
 
     return NextResponse.json({ 
