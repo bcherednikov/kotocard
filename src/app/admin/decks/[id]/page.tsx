@@ -19,8 +19,17 @@ type Card = {
   ru_text: string;
   en_text: string;
   audio_url: string | null;
+  tts_en_url: string | null;
+  tts_ru_url: string | null;
   position: number;
   created_at: string;
+};
+
+type TtsStats = {
+  total: number;
+  with_tts: number;
+  pending: number;
+  percentage: number;
 };
 
 export default function DeckDetailPage() {
@@ -31,6 +40,8 @@ export default function DeckDetailPage() {
   const [cards, setCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [ttsStats, setTtsStats] = useState<TtsStats | null>(null);
+  const [generatingTts, setGeneratingTts] = useState(false);
 
   const deckId = params.id as string;
 
@@ -38,6 +49,7 @@ export default function DeckDetailPage() {
     if (profile && deckId) {
       loadDeck();
       loadCards();
+      loadTtsStats();
     }
   }, [profile, deckId]);
 
@@ -72,6 +84,49 @@ export default function DeckDetailPage() {
       setCards(data || []);
     } catch (err) {
       console.error('Ошибка загрузки карточек:', err);
+    }
+  }
+
+  async function loadTtsStats() {
+    try {
+      const res = await fetch(`/api/decks/${deckId}/generate-tts`);
+      if (res.ok) {
+        const data = await res.json();
+        setTtsStats(data);
+      }
+    } catch (err) {
+      console.error('Ошибка загрузки статистики TTS:', err);
+    }
+  }
+
+  async function handleGenerateTts() {
+    if (!confirm('Запустить генерацию аудио для всех карточек? Это может занять несколько минут.')) {
+      return;
+    }
+
+    setGeneratingTts(true);
+
+    try {
+      const res = await fetch(`/api/decks/${deckId}/generate-tts`, {
+        method: 'POST',
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert(data.message || 'Генерация запущена!');
+        // Обновить статистику через несколько секунд
+        setTimeout(() => {
+          loadTtsStats();
+          loadCards();
+        }, 5000);
+      } else {
+        alert(data.error || 'Ошибка запуска генерации');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Ошибка запуска генерации');
+    } finally {
+      setGeneratingTts(false);
     }
   }
 
@@ -200,9 +255,30 @@ export default function DeckDetailPage() {
         {/* Карточки */}
         <div className="bg-white rounded-xl shadow-lg p-8">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">
-              Карточки ({cards.length})
-            </h2>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                Карточки ({cards.length})
+              </h2>
+              {ttsStats && (
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="text-gray-700">
+                    🔊 Аудио: {ttsStats.with_tts} из {ttsStats.total} ({ttsStats.percentage}%)
+                  </span>
+                  {ttsStats.pending > 0 && (
+                    <button
+                      onClick={handleGenerateTts}
+                      disabled={generatingTts}
+                      className="px-3 py-1 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition disabled:opacity-50"
+                    >
+                      {generatingTts ? '⏳ Запуск...' : '🎤 Сгенерировать аудио'}
+                    </button>
+                  )}
+                  {ttsStats.pending === 0 && (
+                    <span className="text-green-600 font-medium">✅ Все аудио готовы</span>
+                  )}
+                </div>
+              )}
+            </div>
             <div className="flex gap-3">
               <Link
                 href={`/admin/decks/${deckId}/cards/bulk`}
@@ -267,7 +343,15 @@ export default function DeckDetailPage() {
                       {card.audio_url && (
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <span>🔊</span>
-                          <span>Есть аудио</span>
+                          <span>Есть аудио (legacy)</span>
+                        </div>
+                      )}
+                      {(card.tts_en_url || card.tts_ru_url) && (
+                        <div className="flex items-center gap-2 text-sm text-green-700">
+                          <span>🎤</span>
+                          <span>
+                            TTS: {card.tts_en_url ? '🇬🇧' : ''} {card.tts_ru_url ? '🇷🇺' : ''}
+                          </span>
                         </div>
                       )}
                     </div>
