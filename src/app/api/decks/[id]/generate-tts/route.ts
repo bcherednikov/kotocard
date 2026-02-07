@@ -35,35 +35,30 @@ export async function POST(
       );
     }
 
-    // Фильтруем карточки, которым нужна генерация
-    const cardsToGenerate = cards.filter(
-      (card) => !card.tts_en_url || !card.tts_ru_url
-    );
+    // Фильтруем карточки, которым нужна генерация (или проверяем физическое наличие файлов)
+    const cardsToGenerate = cards;
 
     // Запускаем генерацию в фоне
     const generateAsync = async () => {
       let processed = 0;
       for (const card of cardsToGenerate) {
         try {
+          // Всегда генерируем (перезаписываем существующие)
           const [ttsEnUrl, ttsRuUrl] = await Promise.all([
-            card.tts_en_url
-              ? Promise.resolve(card.tts_en_url)
-              : generateAndSaveTts({
-                  text: card.en_text,
-                  lang: 'en',
-                  cardId: card.id,
-                  deckId,
-                  familyId,
-                }),
-            card.tts_ru_url
-              ? Promise.resolve(card.tts_ru_url)
-              : generateAndSaveTts({
-                  text: card.ru_text,
-                  lang: 'ru',
-                  cardId: card.id,
-                  deckId,
-                  familyId,
-                }),
+            generateAndSaveTts({
+              text: card.en_text,
+              lang: 'en',
+              cardId: card.id,
+              deckId,
+              familyId,
+            }),
+            generateAndSaveTts({
+              text: card.ru_text,
+              lang: 'ru',
+              cardId: card.id,
+              deckId,
+              familyId,
+            }),
           ]);
 
           await supabase
@@ -92,7 +87,6 @@ export async function POST(
     return NextResponse.json({
       success: true,
       total_cards: cards.length,
-      already_generated: cards.length - cardsToGenerate.length,
       to_generate: cardsToGenerate.length,
       message: `Генерация запущена для ${cardsToGenerate.length} карточек`,
     });

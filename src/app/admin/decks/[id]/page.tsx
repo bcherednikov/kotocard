@@ -264,7 +264,7 @@ export default function DeckDetailPage() {
                   <span className="text-gray-700">
                     🔊 Аудио: {ttsStats.with_tts} из {ttsStats.total} ({ttsStats.percentage}%)
                   </span>
-                  {ttsStats.pending > 0 && (
+                  {ttsStats.pending > 0 ? (
                     <button
                       onClick={handleGenerateTts}
                       disabled={generatingTts}
@@ -272,9 +272,17 @@ export default function DeckDetailPage() {
                     >
                       {generatingTts ? '⏳ Запуск...' : '🎤 Сгенерировать аудио'}
                     </button>
-                  )}
-                  {ttsStats.pending === 0 && (
-                    <span className="text-green-600 font-medium">✅ Все аудио готовы</span>
+                  ) : (
+                    <>
+                      <span className="text-green-600 font-medium">✅ Все аудио готовы</span>
+                      <button
+                        onClick={handleGenerateTts}
+                        disabled={generatingTts}
+                        className="px-3 py-1 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600 transition disabled:opacity-50"
+                      >
+                        {generatingTts ? '⏳ Запуск...' : '🔄 Регенерировать'}
+                      </button>
+                    </>
                   )}
                 </div>
               )}
