@@ -15,7 +15,7 @@ rsync -avz -e "ssh $SSH_OPTS" \
   ./ "$REMOTE:$APP_DIR/"
 
 echo "🔨 Сборка и перезапуск на сервере..."
-ssh $SSH_OPTS "$REMOTE" "cd $APP_DIR && npm ci && npm run build && pm2 restart kotocard"
+ssh $SSH_OPTS "$REMOTE" "cd $APP_DIR && rm -rf piper-tts/venv && npm ci && npm run build && pm2 restart kotocard"
 
 echo "Готово. Сайт: http://45.89.228.209"
 
