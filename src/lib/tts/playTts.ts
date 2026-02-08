@@ -1,20 +1,61 @@
 'use client';
 
+let currentUtterance: SpeechSynthesisUtterance | null = null;
+
+/**
+ * Озвучить текст через браузерный TTS (Web Speech API).
+ * @param text — текст для озвучки
+ * @param lang — язык (en / ru)
+ */
+export async function playTts(
+  text: string,
+  lang: 'en' | 'ru'
+): Promise<void> {
+  // Остановить предыдущее воспроизведение
+  if (currentUtterance) {
+    speechSynthesis.cancel();
+    currentUtterance = null;
+  }
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = lang === 'ru' ? 'ru-RU' : 'en-US';
+  utterance.rate = 0.85; // Немного медленнее для лучшего понимания
+  utterance.pitch = 1.0;
+  
+  currentUtterance = utterance;
+
+  utterance.onend = () => {
+    if (currentUtterance === utterance) currentUtterance = null;
+  };
+  
+  utterance.onerror = () => {
+    if (currentUtterance === utterance) currentUtterance = null;
+  };
+
+  speechSynthesis.speak(utterance);
+}
+
+/**
+ * Остановить текущую озвучку.
+ */
+export function stopTts(): void {
+  if (currentUtterance) {
+    speechSynthesis.cancel();
+    currentUtterance = null;
+  }
+}
+
+// ===== ЗАКОММЕНТИРОВАННЫЙ КОД PIPER TTS (для будущего возврата) =====
+/*
 import { TTS_DEFAULT_SPEED_BY_LANG, type TtsLang } from './config';
 
 let currentAbortController: AbortController | null = null;
 let currentAudio: HTMLAudioElement | null = null;
 
-/**
- * Озвучить карточку через предгенерированное TTS.
- * @param cardId — ID карточки
- * @param lang — язык (en / ru)
- */
 export async function playTtsForCard(
   cardId: string,
   lang: TtsLang
 ): Promise<void> {
-  // Остановить предыдущее воспроизведение
   if (currentAbortController) {
     currentAbortController.abort();
   }
@@ -27,7 +68,6 @@ export async function playTtsForCard(
   const controller = new AbortController();
   currentAbortController = controller;
 
-  // Запросить TTS (предгенерированный или on-the-fly)
   const res = await fetch(`/api/tts/card/${cardId}?lang=${lang}`, {
     signal: controller.signal,
   });
@@ -56,18 +96,11 @@ export async function playTtsForCard(
   await audio.play();
 }
 
-/**
- * Озвучить текст через Piper TTS API (устаревший метод, для совместимости).
- * @param text — текст для озвучки
- * @param lang — язык (en / ru), определяет голос и скорость по умолчанию
- * @param speed — скорость (length_scale): 1.0 = нормально, >1 = медленнее, <1 = быстрее; если не задано — из конфига по языку
- */
 export async function playTts(
   text: string,
   lang: TtsLang,
   speed?: number
 ): Promise<void> {
-  // Остановить предыдущее воспроизведение
   if (currentAbortController) {
     currentAbortController.abort();
   }
@@ -112,18 +145,4 @@ export async function playTts(
 
   await audio.play();
 }
-
-/**
- * Остановить текущую озвучку.
- */
-export function stopTts(): void {
-  if (currentAbortController) {
-    currentAbortController.abort();
-    currentAbortController = null;
-  }
-  if (currentAudio) {
-    currentAudio.pause();
-    currentAudio.src = '';
-    currentAudio = null;
-  }
-}
+*/

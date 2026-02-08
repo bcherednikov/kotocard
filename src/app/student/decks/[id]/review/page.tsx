@@ -72,10 +72,10 @@ export default function DeckReviewPage() {
     }
   }
 
-  async function speakCard(cardId: string, lang: 'en' | 'ru') {
+  async function speakText(text: string, lang: 'en' | 'ru') {
     try {
-      const { playTtsForCard } = await import('@/lib/tts');
-      await playTtsForCard(cardId, lang);
+      const { playTts } = await import('@/lib/tts');
+      await playTts(text, lang);
     } catch (e) {
       console.error('TTS:', e);
     }
@@ -202,7 +202,7 @@ export default function DeckReviewPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        speakCard(cards[currentIndex].card_id, 'en');
+                        speakText(cards[currentIndex].en_text, 'en');
                       }}
                       className="text-4xl hover:scale-110 transition-transform active:scale-95"
                       title="Прослушать"

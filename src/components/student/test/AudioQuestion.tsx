@@ -6,14 +6,14 @@ import type { AudioQuestion as AudioQuestionType } from '@/lib/srs/question-gene
 type Props = {
   question: AudioQuestionType;
   onAnswer: (answer: string, isCorrect: boolean) => void;
-  speakCard: (cardId: string, lang: 'en' | 'ru') => void;
+  speakText: (text: string, lang: 'en' | 'ru') => void;
 };
 
-export function AudioQuestion({ question, onAnswer, speakCard }: Props) {
+export function AudioQuestion({ question, onAnswer, speakText }: Props) {
   // Auto-play audio on mount
   useEffect(() => {
-    speakCard(question.targetCard.id, 'en');
-  }, [question.targetCard.id]);
+    speakText(question.audioText, 'en');
+  }, [question.audioText]);
 
   return (
     <div>
@@ -22,7 +22,7 @@ export function AudioQuestion({ question, onAnswer, speakCard }: Props) {
         <div className="text-center">
           <p className="text-xl text-gray-700 mb-6">Прослушай слово:</p>
           <button
-            onClick={() => speakCard(question.targetCard.id, 'en')}
+            onClick={() => speakText(question.audioText, 'en')}
             className="px-8 py-4 bg-blue-500 text-white rounded-xl text-2xl hover:bg-blue-600 transition active:scale-95"
           >
             🔊 Воспроизвести
