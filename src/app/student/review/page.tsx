@@ -203,7 +203,7 @@ export default function GlobalReviewPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        speakText(cards[currentIndex].en_text, 'en');
+                        speakText(cards[currentIndex].cards.en_text, 'en');
                       }}
                       className="text-4xl hover:scale-110 transition-transform active:scale-95"
                       title="Прослушать"
