@@ -17,8 +17,7 @@ export default function LoginPage() {
   // Если уже залогинен - редирект
   useEffect(() => {
     if (isInitialized && !isLoading && user && profile) {
-      const redirectPath = profile.role === 'admin' ? '/admin/decks' : '/student';
-      router.replace(redirectPath);
+      router.replace('/dashboard');
     }
   }, [isInitialized, isLoading, user, profile, router]);
 

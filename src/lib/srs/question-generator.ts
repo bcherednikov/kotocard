@@ -112,28 +112,3 @@ export function generateDictationQuestion(
     correctAnswer: targetCard.en_text,
   };
 }
-
-/**
- * Generate a random question type (for review mode).
- */
-export function generateRandomQuestion(
-  targetCard: CardData,
-  allDeckCards: CardData[]
-): SrsQuestion {
-  // Need at least 4 cards for choice/audio questions
-  const hasEnoughCards = allDeckCards.length >= 4;
-  const types: Array<'choice' | 'audio' | 'dictation'> = hasEnoughCards
-    ? ['choice', 'audio', 'dictation']
-    : ['dictation'];
-
-  const type = types[Math.floor(Math.random() * types.length)];
-
-  switch (type) {
-    case 'choice':
-      return generateChoiceQuestion(targetCard, allDeckCards);
-    case 'audio':
-      return generateAudioQuestion(targetCard, allDeckCards);
-    case 'dictation':
-      return generateDictationQuestion(targetCard);
-  }
-}

@@ -86,33 +86,6 @@ export async function getPrimaryTestCards(
 }
 
 /**
- * Cards ready for review: young/mature/relearning with next_review_at <= now.
- */
-export async function getReviewCards(
-  supabase: SupabaseClient,
-  userId: string,
-  deckId?: string,
-  limit: number = 30
-): Promise<UserCardWithCard[]> {
-  let query = supabase
-    .from('user_cards')
-    .select('*, cards(*)')
-    .eq('user_id', userId)
-    .in('status', ['young', 'mature', 'relearning'])
-    .lte('next_review_at', new Date().toISOString())
-    .order('next_review_at', { ascending: true })
-    .limit(limit);
-
-  if (deckId) {
-    query = query.eq('deck_id', deckId);
-  }
-
-  const { data, error } = await query;
-  if (error) throw error;
-  return (data ?? []) as UserCardWithCard[];
-}
-
-/**
  * Simple review: all non-new cards (studied at least once), shuffled, limited.
  */
 export async function getSimpleReviewCards(

@@ -1,7 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import translate from 'translate';
-// import { generateTtsForCards } from '@/lib/tts/generate-background';
 
 // Настройка translate (использовать Google по умолчанию)
 translate.engine = 'google';

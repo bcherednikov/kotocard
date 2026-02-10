@@ -54,11 +54,7 @@ export function Header() {
     setIsMobileMenuOpen(false);
   }
 
-  const logoHref = !user
-    ? '/'
-    : profile?.role === 'admin'
-      ? '/admin/decks'
-      : '/student';
+  const logoHref = user ? '/dashboard' : '/';
 
   return (
     <>
@@ -100,56 +96,27 @@ export function Header() {
           <nav className="hidden md:flex items-center gap-6">
             {user ? (
               <>
-                {/* Навигация для админа */}
-                {profile?.role === 'admin' && (
-                  <>
-                    <Link 
-                      href="/admin/decks" 
-                      className="text-gray-700 hover:text-gray-900 transition font-medium"
-                    >
-                      Наборы
-                    </Link>
-                    <Link 
-                      href="/admin/children" 
-                      className="text-gray-700 hover:text-gray-900 transition font-medium"
-                    >
-                      Дети
-                    </Link>
-                    <Link 
-                      href="/admin/stats" 
-                      className="text-gray-700 hover:text-gray-900 transition font-medium"
-                    >
-                      📊 Результаты
-                    </Link>
-                  </>
-                )}
-                
-                {/* Навигация для студента */}
-                {profile?.role === 'student' && (
-                  <>
-                    <Link
-                      href="/student"
-                      className="text-gray-700 hover:text-gray-900 transition font-medium"
-                    >
-                      🏠 Главная
-                    </Link>
-                    <Link
-                      href="/student/decks"
-                      className="text-gray-700 hover:text-gray-900 transition font-medium"
-                    >
-                      📚 Наборы
-                    </Link>
-                    <Link
-                      href="/student/review"
-                      className="text-gray-700 hover:text-gray-900 transition font-medium"
-                    >
-                      🔄 Повторение
-                    </Link>
-                  </>
-                )}
-                
+                <Link
+                  href="/decks"
+                  className="text-gray-700 hover:text-gray-900 transition font-medium"
+                >
+                  Наборы
+                </Link>
+                <Link
+                  href="/groups"
+                  className="text-gray-700 hover:text-gray-900 transition font-medium"
+                >
+                  Группы
+                </Link>
+                <Link
+                  href="/review"
+                  className="text-gray-700 hover:text-gray-900 transition font-medium"
+                >
+                  Повторение
+                </Link>
+
                 <span className="text-gray-800 font-medium">
-                  👤 {profile?.display_name || user.email}
+                  {profile?.display_name || user.email}
                 </span>
                 <button
                   onClick={handleSignOut}
@@ -192,62 +159,30 @@ export function Header() {
           <nav className="py-4 space-y-2 border-t mt-4">
             {user ? (
               <>
-                {/* Навигация для админа */}
-                {profile?.role === 'admin' && (
-                  <>
-                    <Link 
-                      href="/admin/decks" 
-                      className="block px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition font-medium"
-                      onClick={closeMobileMenu}
-                    >
-                      📚 Наборы
-                    </Link>
-                    <Link 
-                      href="/admin/children" 
-                      className="block px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition font-medium"
-                      onClick={closeMobileMenu}
-                    >
-                      👶 Дети
-                    </Link>
-                    <Link 
-                      href="/admin/stats" 
-                      className="block px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition font-medium"
-                      onClick={closeMobileMenu}
-                    >
-                      📊 Результаты
-                    </Link>
-                  </>
-                )}
-                
-                {/* Навигация для студента */}
-                {profile?.role === 'student' && (
-                  <>
-                    <Link
-                      href="/student"
-                      className="block px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition font-medium"
-                      onClick={closeMobileMenu}
-                    >
-                      🏠 Главная
-                    </Link>
-                    <Link
-                      href="/student/decks"
-                      className="block px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition font-medium"
-                      onClick={closeMobileMenu}
-                    >
-                      📚 Наборы
-                    </Link>
-                    <Link
-                      href="/student/review"
-                      className="block px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition font-medium"
-                      onClick={closeMobileMenu}
-                    >
-                      🔄 Повторение
-                    </Link>
-                  </>
-                )}
-                
+                <Link
+                  href="/decks"
+                  className="block px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition font-medium"
+                  onClick={closeMobileMenu}
+                >
+                  Наборы
+                </Link>
+                <Link
+                  href="/groups"
+                  className="block px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition font-medium"
+                  onClick={closeMobileMenu}
+                >
+                  Группы
+                </Link>
+                <Link
+                  href="/review"
+                  className="block px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition font-medium"
+                  onClick={closeMobileMenu}
+                >
+                  Повторение
+                </Link>
+
                 <div className="px-4 py-3 text-gray-600 border-t border-gray-200 mt-2 pt-4">
-                  👤 {profile?.display_name || user.email}
+                  {profile?.display_name || user.email}
                 </div>
                 <button
                   onClick={handleSignOut}

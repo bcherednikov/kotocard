@@ -1,4 +1,29 @@
+'use client';
+
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import Link from 'next/link';
+
 export default function HomePage() {
+  const { user, isInitialized, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isInitialized && !isLoading && user) {
+      router.replace('/dashboard');
+    }
+  }, [isInitialized, isLoading, user, router]);
+
+  // Если авторизован — не показываем лендинг (идёт редирект)
+  if (user) {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <p className="text-xl text-gray-800">Загрузка...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-16">
       <div className="max-w-4xl mx-auto">
@@ -9,47 +34,47 @@ export default function HomePage() {
             Добро пожаловать в KotoCard
           </h1>
           <p className="text-xl text-gray-800 mb-8">
-            Персональное семейное приложение для изучения английского языка через карточки
+            Приложение для изучения английского языка через карточки
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a 
-              href="/login" 
+            <Link
+              href="/login"
               className="inline-block px-8 py-4 bg-blue-600 text-white text-lg font-semibold rounded-lg hover:bg-blue-700 transition shadow-lg"
             >
               Войти
-            </a>
-            <a 
-              href="/register" 
+            </Link>
+            <Link
+              href="/register"
               className="inline-block px-8 py-4 border-2 border-blue-600 text-blue-600 text-lg font-semibold rounded-lg hover:bg-blue-50 transition"
             >
               Создать аккаунт
-            </a>
+            </Link>
           </div>
         </div>
 
         {/* Features */}
         <div className="grid md:grid-cols-3 gap-8 mb-16">
           <div className="bg-white p-6 rounded-xl shadow-md">
-            <div className="text-4xl mb-4">👨‍👩‍👧‍👦</div>
-            <h3 className="text-xl font-semibold mb-2 text-gray-900">Для всей семьи</h3>
+            <div className="text-4xl mb-4">📝</div>
+            <h3 className="text-xl font-semibold mb-2 text-gray-900">Свои наборы</h3>
             <p className="text-gray-700">
-              Родители создают наборы карточек, дети учатся и отслеживают прогресс
+              Создавайте наборы карточек и учите слова в своём темпе
             </p>
           </div>
-          
+
+          <div className="bg-white p-6 rounded-xl shadow-md">
+            <div className="text-4xl mb-4">👥</div>
+            <h3 className="text-xl font-semibold mb-2 text-gray-900">Группы</h3>
+            <p className="text-gray-700">
+              Делитесь наборами с друзьями и семьёй через группы
+            </p>
+          </div>
+
           <div className="bg-white p-6 rounded-xl shadow-md">
             <div className="text-4xl mb-4">🎯</div>
-            <h3 className="text-xl font-semibold mb-2 text-gray-900">Эффективное обучение</h3>
+            <h3 className="text-xl font-semibold mb-2 text-gray-900">Умное повторение</h3>
             <p className="text-gray-700">
-              Карточки с транскрипциями, озвучкой и отслеживанием прогресса
-            </p>
-          </div>
-          
-          <div className="bg-white p-6 rounded-xl shadow-md">
-            <div className="text-4xl mb-4">📊</div>
-            <h3 className="text-xl font-semibold mb-2 text-gray-900">Статистика</h3>
-            <p className="text-gray-700">
-              Следите за успехами детей, повторяйте сложные слова
+              Система интервального повторения подскажет, что пора повторить
             </p>
           </div>
         </div>

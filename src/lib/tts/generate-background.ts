@@ -11,7 +11,7 @@ export async function generateTtsForCards(
   // Получить данные карточек
   const { data: cards, error } = await supabase
     .from('cards')
-    .select('id, deck_id, en_text, ru_text, tts_en_url, tts_ru_url, decks(family_id)')
+    .select('id, deck_id, en_text, ru_text, tts_en_url, tts_ru_url')
     .in('id', cardIds);
 
   if (error || !cards || cards.length === 0) {
@@ -32,9 +32,6 @@ export async function generateTtsForCards(
   const generateAsync = async () => {
     for (const card of cardsToGenerate) {
       try {
-        const familyId = (card.decks as any)?.family_id;
-        if (!familyId) continue;
-
         const [ttsEnUrl, ttsRuUrl] = await Promise.all([
           card.tts_en_url
             ? Promise.resolve(card.tts_en_url)
@@ -43,7 +40,6 @@ export async function generateTtsForCards(
                 lang: 'en',
                 cardId: card.id,
                 deckId: card.deck_id,
-                familyId,
               }),
           card.tts_ru_url
             ? Promise.resolve(card.tts_ru_url)
@@ -52,7 +48,6 @@ export async function generateTtsForCards(
                 lang: 'ru',
                 cardId: card.id,
                 deckId: card.deck_id,
-                familyId,
               }),
         ]);
 

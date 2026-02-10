@@ -13,23 +13,21 @@ export interface TtsGenerateOptions {
   lang: 'en' | 'ru';
   cardId: string;
   deckId: string;
-  familyId: string;
   speed?: number;
 }
 
 /**
  * Генерирует TTS-файл и сохраняет на диск.
- * Возвращает относительный URL для фронтенда: /tts/family/deck/card_lang.wav
+ * Возвращает относительный URL для фронтенда: /tts/{deckId}/{cardId}_{lang}.wav
  */
 export async function generateAndSaveTts(
   options: TtsGenerateOptions
 ): Promise<string> {
-  const { text, lang, cardId, deckId, familyId, speed = 1.2 } = options;
+  const { text, lang, cardId, deckId, speed = 1.2 } = options;
 
-  // Создать структуру папок
-  const familyDir = path.join(TTS_DIR, familyId);
-  const deckDir = path.join(familyDir, deckId);
-  
+  // Создать структуру папок: /tts/{deckId}/
+  const deckDir = path.join(TTS_DIR, deckId);
+
   if (!fs.existsSync(deckDir)) {
     fs.mkdirSync(deckDir, { recursive: true });
   }
@@ -37,7 +35,7 @@ export async function generateAndSaveTts(
   // Путь к файлу
   const fileName = `${cardId}_${lang}.wav`;
   const filePath = path.join(deckDir, fileName);
-  const publicUrl = `/tts/${familyId}/${deckId}/${fileName}`;
+  const publicUrl = `/tts/${deckId}/${fileName}`;
 
   // Если файл уже существует, вернуть URL
   if (fs.existsSync(filePath)) {
@@ -91,12 +89,11 @@ export async function generateAndSaveTts(
  * Удаляет TTS-файлы для карточки (при удалении карточки или изменении текста)
  */
 export function deleteTtsFiles(
-  familyId: string,
   deckId: string,
   cardId: string
 ): void {
-  const deckDir = path.join(TTS_DIR, familyId, deckId);
-  
+  const deckDir = path.join(TTS_DIR, deckId);
+
   ['en', 'ru'].forEach((lang) => {
     const filePath = path.join(deckDir, `${cardId}_${lang}.wav`);
     if (fs.existsSync(filePath)) {
@@ -109,11 +106,10 @@ export function deleteTtsFiles(
  * Проверяет, существует ли TTS-файл
  */
 export function ttsFileExists(
-  familyId: string,
   deckId: string,
   cardId: string,
   lang: 'en' | 'ru'
 ): boolean {
-  const filePath = path.join(TTS_DIR, familyId, deckId, `${cardId}_${lang}.wav`);
+  const filePath = path.join(TTS_DIR, deckId, `${cardId}_${lang}.wav`);
   return fs.existsSync(filePath);
 }

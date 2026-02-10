@@ -11,15 +11,15 @@ export default function RegisterPage() {
   const { user, isInitialized, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [familyName, setFamilyName] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [waitingForAuth, setWaitingForAuth] = useState(false);
 
-  // Редирект на onboarding когда AuthContext загрузил профиль после логина
+  // Редирект после логина
   useEffect(() => {
     if (waitingForAuth && isInitialized && !isLoading && user) {
-      router.replace('/onboarding');
+      router.replace('/dashboard');
     }
   }, [waitingForAuth, isInitialized, isLoading, user, router]);
 
@@ -38,7 +38,7 @@ export default function RegisterPage() {
         body: JSON.stringify({
           email,
           password,
-          familyName
+          displayName
         })
       });
 
@@ -84,21 +84,21 @@ export default function RegisterPage() {
       <div className="text-center mb-8">
         <div className="text-5xl mb-4">📚</div>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Регистрация</h1>
-        <p className="text-gray-800">Создайте семейный аккаунт</p>
+        <p className="text-gray-800">Создайте аккаунт для обучения</p>
       </div>
 
       <form onSubmit={handleRegister} className="space-y-6">
         <div>
-          <label htmlFor="familyName" className="block text-sm font-medium text-gray-900 mb-2">
-            Название семьи
+          <label htmlFor="displayName" className="block text-sm font-medium text-gray-900 mb-2">
+            Ваше имя
           </label>
           <input
-            id="familyName"
+            id="displayName"
             type="text"
-            value={familyName}
-            onChange={(e) => setFamilyName(e.target.value)}
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
             className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-gray-900 placeholder:text-gray-500"
-            placeholder="Семья Ивановых"
+            placeholder="Как вас зовут"
             required
             disabled={loading}
           />
@@ -106,7 +106,7 @@ export default function RegisterPage() {
 
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-900 mb-2">
-            Email родителя
+            Email
           </label>
           <input
             id="email"

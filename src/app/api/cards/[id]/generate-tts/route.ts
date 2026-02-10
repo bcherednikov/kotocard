@@ -16,7 +16,7 @@ export async function POST(
     // Получить данные карточки
     const { data: card, error: cardError } = await supabase
       .from('cards')
-      .select('id, deck_id, en_text, ru_text, decks(family_id)')
+      .select('id, deck_id, en_text, ru_text')
       .eq('id', cardId)
       .single();
 
@@ -27,14 +27,6 @@ export async function POST(
       );
     }
 
-    const familyId = (card.decks as any)?.family_id;
-    if (!familyId) {
-      return NextResponse.json(
-        { error: 'Family ID not found' },
-        { status: 400 }
-      );
-    }
-
     // Генерировать TTS для обоих языков
     const [ttsEnUrl, ttsRuUrl] = await Promise.all([
       generateAndSaveTts({
@@ -42,14 +34,12 @@ export async function POST(
         lang: 'en',
         cardId: card.id,
         deckId: card.deck_id,
-        familyId,
       }),
       generateAndSaveTts({
         text: card.ru_text,
         lang: 'ru',
         cardId: card.id,
         deckId: card.deck_id,
-        familyId,
       }),
     ]);
 

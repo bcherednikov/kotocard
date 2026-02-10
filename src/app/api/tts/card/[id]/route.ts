@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
-import { generateAndSaveTts, ttsFileExists } from '@/lib/tts/tts-server';
+import { generateAndSaveTts } from '@/lib/tts/tts-server';
 import fs from 'fs';
 import path from 'path';
 
@@ -22,7 +22,7 @@ export async function GET(
     // Получить карточку с URL TTS
     const { data: card, error } = await supabase
       .from('cards')
-      .select('id, deck_id, en_text, ru_text, tts_en_url, tts_ru_url, decks(family_id)')
+      .select('id, deck_id, en_text, ru_text, tts_en_url, tts_ru_url')
       .eq('id', cardId)
       .single();
 
@@ -31,10 +31,9 @@ export async function GET(
     }
 
     const ttsUrl = lang === 'en' ? card.tts_en_url : card.tts_ru_url;
-    const familyId = (card.decks as any)?.family_id;
 
     // Если URL есть в БД и файл существует — вернуть его
-    if (ttsUrl && familyId) {
+    if (ttsUrl) {
       const filePath = path.join(PUBLIC_DIR, ttsUrl);
       if (fs.existsSync(filePath)) {
         const buffer = fs.readFileSync(filePath);
@@ -48,18 +47,13 @@ export async function GET(
     }
 
     // Если нет — генерировать на лету и сохранить
-    if (!familyId) {
-      return NextResponse.json({ error: 'Family ID not found' }, { status: 400 });
-    }
-
     const text = lang === 'en' ? card.en_text : card.ru_text;
-    
+
     const generatedUrl = await generateAndSaveTts({
       text,
       lang,
       cardId: card.id,
       deckId: card.deck_id,
-      familyId,
     });
 
     // Обновить БД

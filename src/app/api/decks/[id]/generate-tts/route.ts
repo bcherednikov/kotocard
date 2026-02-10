@@ -16,7 +16,7 @@ export async function POST(
     // Получить все карточки набора
     const { data: cards, error } = await supabase
       .from('cards')
-      .select('id, en_text, ru_text, tts_en_url, tts_ru_url, decks(family_id)')
+      .select('id, en_text, ru_text, tts_en_url, tts_ru_url')
       .eq('deck_id', deckId)
       .order('position');
 
@@ -24,14 +24,6 @@ export async function POST(
       return NextResponse.json(
         { error: 'Cards not found' },
         { status: 404 }
-      );
-    }
-
-    const familyId = (cards[0].decks as any)?.family_id;
-    if (!familyId) {
-      return NextResponse.json(
-        { error: 'Family ID not found' },
-        { status: 400 }
       );
     }
 
@@ -50,14 +42,12 @@ export async function POST(
               lang: 'en',
               cardId: card.id,
               deckId,
-              familyId,
             }),
             generateAndSaveTts({
               text: card.ru_text,
               lang: 'ru',
               cardId: card.id,
               deckId,
-              familyId,
             }),
           ]);
 

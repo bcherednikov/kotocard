@@ -7,8 +7,6 @@ import type { User } from '@supabase/supabase-js';
 export type Profile = {
   id: string;
   display_name: string;
-  role: 'admin' | 'student';
-  family_id: string;
   avatar_url?: string;
   show_russian_transcription?: boolean;
 };
@@ -16,10 +14,8 @@ export type Profile = {
 type AuthContextType = {
   user: User | null;
   profile: Profile | null;
-  isAdmin: boolean;
   isInitialized: boolean;
   isLoading: boolean;
-  loading: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 };
@@ -27,10 +23,8 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   profile: null,
-  isAdmin: false,
   isInitialized: false,
   isLoading: true,
-  loading: true,
   signOut: async () => {},
   refreshProfile: async () => {},
 });
@@ -139,8 +133,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const isAdmin = profile?.role === 'admin';
-
   const signOut = async () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -186,10 +178,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{
       user,
       profile,
-      isAdmin,
       isInitialized,
       isLoading,
-      loading: isLoading,
       signOut,
       refreshProfile
     }}>
