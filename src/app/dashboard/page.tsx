@@ -34,6 +34,7 @@ export default function DashboardPage() {
   const { user, profile } = useAuth();
   const [myDecks, setMyDecks] = useState<DeckWithStats[]>([]);
   const [groupSections, setGroupSections] = useState<GroupWithDecks[]>([]);
+  const [totalStats, setTotalStats] = useState({ mastered: 0, total: 0, percent: 0 });
   const [reviewReady, setReviewReady] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -104,6 +105,18 @@ export default function DashboardPage() {
       const withStats = (decks: Deck[]): DeckWithStats[] =>
         decks.map(d => ({ ...d, stats: statsMap.get(d.id) ?? emptySrsStats }));
 
+      const allWithStats = withStats(allDecks);
+      let totalMastered = 0, totalCards = 0;
+      for (const d of allWithStats) {
+        totalMastered += d.stats.masteredCount;
+        totalCards += d.stats.total;
+      }
+      setTotalStats({
+        mastered: totalMastered,
+        total: totalCards,
+        percent: totalCards === 0 ? 0 : Math.round((totalMastered / totalCards) * 100),
+      });
+
       setMyDecks(withStats(ownDecks || []));
       // Build group sections with stats
       const sections: GroupWithDecks[] = [];
@@ -159,6 +172,32 @@ export default function DashboardPage() {
             Привет, {profile?.display_name}!
           </h1>
         </div>
+
+        {/* Stats */}
+        {(totalStats.total > 0 || reviewReady > 0) && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-5 text-white shadow-lg">
+              <div className="text-2xl mb-1">📝</div>
+              <div className="text-3xl font-bold">{totalStats.mastered}</div>
+              <div className="text-green-100 text-sm">Выучено слов</div>
+            </div>
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 text-white shadow-lg">
+              <div className="text-2xl mb-1">📚</div>
+              <div className="text-3xl font-bold">{totalStats.total}</div>
+              <div className="text-blue-100 text-sm">Всего слов</div>
+            </div>
+            <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-5 text-white shadow-lg">
+              <div className="text-2xl mb-1">🔄</div>
+              <div className="text-3xl font-bold">{reviewReady}</div>
+              <div className="text-orange-100 text-sm">Изучено слов</div>
+            </div>
+            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-5 text-white shadow-lg">
+              <div className="text-2xl mb-1">⭐</div>
+              <div className="text-3xl font-bold">{totalStats.percent}%</div>
+              <div className="text-purple-100 text-sm">Процент освоения</div>
+            </div>
+          </div>
+        )}
 
         {/* Review widget */}
         {reviewReady > 0 && (
