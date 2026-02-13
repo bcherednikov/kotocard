@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { getSimpleReviewCards, updateUserCard } from '@/lib/srs/queries';
 import { handleSimpleReviewKnow, handleSimpleReviewDontKnow } from '@/lib/srs/engine';
 import type { UserCardWithCard } from '@/lib/srs/types';
+import { trackActivityInBackground } from '@/lib/analytics/tracker';
 
 export default function GlobalReviewSessionPage() {
   const router = useRouter();
@@ -29,6 +30,9 @@ export default function GlobalReviewSessionPage() {
     try {
       const data = await getSimpleReviewCards(supabase, profile.id, undefined, 10);
       setCards(data);
+      if (data.length > 0) {
+        trackActivityInBackground(supabase, profile.id, { study_sessions: 1 });
+      }
     } catch (err) {
       console.error('Error loading review cards:', err);
     } finally {
@@ -44,6 +48,7 @@ export default function GlobalReviewSessionPage() {
 
     try {
       await updateUserCard(supabase, card.user_card_id, updates);
+      trackActivityInBackground(supabase, profile!.id, { reviews_completed: 1, words_studied: 1 });
     } catch (err) {
       console.error('Error saving progress:', err);
     }

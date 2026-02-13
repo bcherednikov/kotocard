@@ -114,6 +114,12 @@ export function Header() {
                 >
                   Повторение
                 </Link>
+                <Link
+                  href="/achievements"
+                  className="text-gray-700 hover:text-gray-900 transition font-medium"
+                >
+                  Достижения
+                </Link>
 
                 <span className="text-gray-800 font-medium">
                   {profile?.display_name || user.email}
@@ -179,6 +185,13 @@ export function Header() {
                   onClick={closeMobileMenu}
                 >
                   Повторение
+                </Link>
+                <Link
+                  href="/achievements"
+                  className="block px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition font-medium"
+                  onClick={closeMobileMenu}
+                >
+                  Достижения
                 </Link>
 
                 <div className="px-4 py-3 text-gray-600 border-t border-gray-200 mt-2 pt-4">

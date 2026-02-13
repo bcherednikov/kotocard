@@ -14,6 +14,8 @@ import { ChoiceQuestion } from '@/components/student/test/ChoiceQuestion';
 import { AudioQuestion } from '@/components/student/test/AudioQuestion';
 import { DictationQuestion } from '@/components/student/test/DictationQuestion';
 import { TestFeedback } from '@/components/student/test/TestFeedback';
+import { trackActivityInBackground } from '@/lib/analytics/tracker';
+import type { DailyActivityIncrements } from '@/lib/analytics/types';
 
 const MAX_QUESTIONS = 30;
 
@@ -51,7 +53,10 @@ export default function PrimaryTestPage() {
       setTestCards(limited);
       setAllDeckCards(deckCards);
 
-      if (limited.length > 0) prepareQuestion(limited[0], deckCards);
+      if (limited.length > 0) {
+        prepareQuestion(limited[0], deckCards);
+        trackActivityInBackground(supabase, profile.id, { study_sessions: 1 });
+      }
     } catch (err) {
       console.error('Error loading test data:', err);
     } finally {
@@ -88,6 +93,19 @@ export default function PrimaryTestPage() {
 
     try {
       await updateUserCard(supabase, card.user_card_id, updates);
+
+      // Track activity
+      const increments: Partial<DailyActivityIncrements> = {};
+      if (isCorrect) {
+        increments.tests_passed = 1;
+        if (currentTestType === 'choice') increments.choice_tests_passed = 1;
+        else if (currentTestType === 'audio') increments.audio_tests_passed = 1;
+        else if (currentTestType === 'dictation') increments.dictation_tests_passed = 1;
+        if (updates.status === 'young') increments.words_learned = 1;
+      } else {
+        increments.tests_failed = 1;
+      }
+      trackActivityInBackground(supabase, user!.id, increments);
     } catch (err) {
       console.error('Error saving test result:', err);
     }

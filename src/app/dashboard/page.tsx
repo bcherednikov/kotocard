@@ -7,6 +7,11 @@ import Link from 'next/link';
 import { getDecksSrsStats, getReviewCount } from '@/lib/srs/queries';
 import { DeckSrsProgress } from '@/components/student/DeckSrsProgress';
 import type { DeckSrsStats } from '@/lib/srs/types';
+import { StreakWidget } from '@/components/dashboard/StreakWidget';
+import { AnalyticsSection } from '@/components/dashboard/AnalyticsSection';
+import { RecentAchievements } from '@/components/dashboard/RecentAchievements';
+import { getStreakData, getTodayActivity, getLast7Days, getUserAchievements } from '@/lib/analytics/queries';
+import type { StreakData, TodayProgress, Last7Days, UserAchievementRow } from '@/lib/analytics/types';
 
 type Deck = {
   id: string;
@@ -39,6 +44,12 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Analytics state
+  const [streakData, setStreakData] = useState<StreakData>({ currentStreak: 0, longestStreak: 0, lastActiveDate: null });
+  const [todayProgress, setTodayProgress] = useState<TodayProgress>({ wordsStudied: 0, reviewsCompleted: 0, total: 0, goal: 10, completed: false });
+  const [last7Days, setLast7Days] = useState<Last7Days[]>([]);
+  const [achievements, setAchievements] = useState<UserAchievementRow[]>([]);
+
   useEffect(() => {
     if (user && profile) loadData();
   }, [user, profile]);
@@ -66,7 +77,6 @@ export default function DashboardPage() {
 
       if (myGroups && myGroups.length > 0) {
         const groupIds = myGroups.map(g => g.group_id);
-        // Init group map
         for (const mg of myGroups) {
           const g = mg.groups as any;
           if (g) groupMap.set(g.id, { id: g.id, name: g.name, decks: [] });
@@ -95,11 +105,16 @@ export default function DashboardPage() {
       const allDecks = [...(ownDecks || []), ...allGroupDecks];
       const allDeckIds = allDecks.map(d => d.id);
 
-      const [statsMap, reviewCount] = await Promise.all([
+      // Load SRS stats + review count + analytics in parallel
+      const [statsMap, reviewCount, streak, today, last7, userAchievements] = await Promise.all([
         allDeckIds.length > 0
           ? getDecksSrsStats(supabase, user.id, allDeckIds)
           : Promise.resolve(new Map<string, DeckSrsStats>()),
         getReviewCount(supabase, user.id),
+        getStreakData(supabase, user.id).catch(() => ({ currentStreak: 0, longestStreak: 0, lastActiveDate: null } as StreakData)),
+        getTodayActivity(supabase, user.id).catch(() => ({ wordsStudied: 0, reviewsCompleted: 0, total: 0, goal: 10, completed: false } as TodayProgress)),
+        getLast7Days(supabase, user.id).catch(() => [] as Last7Days[]),
+        getUserAchievements(supabase, user.id).catch(() => [] as UserAchievementRow[]),
       ]);
 
       const withStats = (decks: Deck[]): DeckWithStats[] =>
@@ -118,7 +133,6 @@ export default function DashboardPage() {
       });
 
       setMyDecks(withStats(ownDecks || []));
-      // Build group sections with stats
       const sections: GroupWithDecks[] = [];
       for (const [, entry] of groupMap) {
         if (entry.decks.length > 0) {
@@ -127,6 +141,13 @@ export default function DashboardPage() {
       }
       setGroupSections(sections);
       setReviewReady(reviewCount);
+
+      // Set analytics state
+      setStreakData(streak);
+      setTodayProgress(today);
+      setLast7Days(last7);
+      setAchievements(userAchievements);
+
       setError(null);
     } catch (err: any) {
       console.error('Dashboard load error:', err);
@@ -173,6 +194,11 @@ export default function DashboardPage() {
           </h1>
         </div>
 
+        {/* Streak Widget */}
+        {last7Days.length > 0 && (
+          <StreakWidget streak={streakData} today={todayProgress} last7={last7Days} />
+        )}
+
         {/* Stats */}
         {(totalStats.total > 0 || reviewReady > 0) && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -189,7 +215,7 @@ export default function DashboardPage() {
             <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-5 text-white shadow-lg">
               <div className="text-2xl mb-1">🔄</div>
               <div className="text-3xl font-bold">{reviewReady}</div>
-              <div className="text-orange-100 text-sm">Изучено слов</div>
+              <div className="text-orange-100 text-sm">К повторению</div>
             </div>
             <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-5 text-white shadow-lg">
               <div className="text-2xl mb-1">⭐</div>
@@ -198,6 +224,12 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
+
+        {/* Analytics Section */}
+        {user && <AnalyticsSection supabase={supabase} userId={user.id} />}
+
+        {/* Recent Achievements */}
+        <RecentAchievements achievements={achievements} />
 
         {/* Review widget */}
         {reviewReady > 0 && (

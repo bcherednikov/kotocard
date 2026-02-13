@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { getStudyCards, updateUserCard, ensureUserCardsExist } from '@/lib/srs/queries';
 import { handleMarkKnow, handleMarkDontKnow } from '@/lib/srs/engine';
 import type { UserCardWithCard } from '@/lib/srs/types';
+import { trackActivityInBackground } from '@/lib/analytics/tracker';
 
 export default function StudyPage() {
   const params = useParams();
@@ -34,6 +35,9 @@ export default function StudyPage() {
       const data = await getStudyCards(supabase, profile.id, deckId);
       const shuffled = [...data].sort(() => Math.random() - 0.5);
       setCards(shuffled);
+      if (shuffled.length > 0) {
+        trackActivityInBackground(supabase, profile.id, { study_sessions: 1 });
+      }
     } catch (err) {
       console.error('Error loading study cards:', err);
     } finally {
@@ -49,6 +53,7 @@ export default function StudyPage() {
 
     try {
       await updateUserCard(supabase, card.user_card_id, updates);
+      trackActivityInBackground(supabase, user.id, { words_studied: 1 });
     } catch (err) {
       console.error('Error saving progress:', err);
     }

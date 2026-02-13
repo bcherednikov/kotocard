@@ -7,6 +7,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getAllDeckCards } from '@/lib/srs/queries';
 import type { CardData } from '@/lib/srs/types';
+import { trackActivityInBackground } from '@/lib/analytics/tracker';
 
 const TOTAL_HINTS = 20;
 const HINTS_PER_USE = 2;
@@ -51,6 +52,9 @@ export default function DictationPrepPage() {
         return { card, lang, spokenText: lang === 'en' ? card.en_text : card.ru_text, answer: card.en_text };
       });
       setTasks(wordTasks);
+      if (wordTasks.length > 0 && profile) {
+        trackActivityInBackground(supabase, profile.id, { study_sessions: 1 });
+      }
     } catch (err) {
       console.error('Error loading cards:', err);
     } finally {
@@ -97,6 +101,14 @@ export default function DictationPrepPage() {
     setLastCorrect(correct);
     setShowFeedback(true);
     setStats({ correct: correct ? stats.correct + 1 : stats.correct, incorrect: !correct ? stats.incorrect + 1 : stats.incorrect });
+
+    if (profile) {
+      if (correct) {
+        trackActivityInBackground(supabase, profile.id, { dictation_tests_passed: 1, tests_passed: 1 });
+      } else {
+        trackActivityInBackground(supabase, profile.id, { tests_failed: 1 });
+      }
+    }
   }
 
   function handleNext() {
