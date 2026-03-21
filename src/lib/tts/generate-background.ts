@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/client';
+import { createServerAnonClient } from '@/lib/supabase/server-anon';
 import { generateAndSaveTts } from './tts-server';
 
 /**
@@ -8,6 +8,7 @@ export async function generateTtsForCards(
   cardIds: string[],
   options?: { immediate?: boolean }
 ): Promise<void> {
+  const supabase = createServerAnonClient();
   // Получить данные карточек
   const { data: cards, error } = await supabase
     .from('cards')

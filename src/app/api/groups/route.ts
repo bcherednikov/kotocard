@@ -1,16 +1,12 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { getServiceRoleClient } from '@/lib/supabase/service-role';
 
 /**
  * POST /api/groups — создать группу + авто-добавить создателя как admin
  * Body: { name, description?, deck_add_permission?, userId }
  */
 export async function POST(request: Request) {
+  const supabaseAdmin = getServiceRoleClient();
   try {
     const { name, description, deck_add_permission, userId } = await request.json();
 

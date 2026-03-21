@@ -96,7 +96,7 @@ export default function BulkCreateCardsPage() {
 
           <div className="flex gap-4 pt-4">
             <button type="submit" disabled={loading || !!result}
-              className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95">
+              className="flex-1 bg-blue-500 bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95">
               {loading ? 'Создаём карточки...' : 'Создать карточки'}
             </button>
             <button type="button" onClick={() => router.push(`/decks/${deckId}`)} disabled={loading}

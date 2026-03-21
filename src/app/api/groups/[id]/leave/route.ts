@@ -1,10 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { getServiceRoleClient } from '@/lib/supabase/service-role';
 
 /**
  * POST /api/groups/[id]/leave — выйти из группы
@@ -15,6 +10,7 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const supabaseAdmin = getServiceRoleClient();
   try {
     const { id: groupId } = await params;
     const { userId } = await request.json();

@@ -368,7 +368,7 @@ export default function GroupSettingsPage() {
             {members.map(member => (
               <div key={member.id} className="py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                  <div className="w-8 h-8 bg-purple-400 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
                     {member.display_name[0]?.toUpperCase()}
                   </div>
                   <span className="font-medium text-gray-900">

@@ -3,6 +3,38 @@
 let currentUtterance: SpeechSynthesisUtterance | null = null;
 
 /**
+ * Получить голоса (iOS грузит их асинхронно через voiceschanged).
+ */
+async function getVoices(): Promise<SpeechSynthesisVoice[]> {
+  let voices = speechSynthesis.getVoices();
+  if (voices.length > 0) return voices;
+  return new Promise(resolve => {
+    const handler = () => {
+      speechSynthesis.removeEventListener('voiceschanged', handler);
+      resolve(speechSynthesis.getVoices());
+    };
+    speechSynthesis.addEventListener('voiceschanged', handler);
+    // Fallback если событие уже не придёт
+    setTimeout(() => { speechSynthesis.removeEventListener('voiceschanged', handler); resolve(speechSynthesis.getVoices()); }, 500);
+  });
+}
+
+/**
+ * Найти наиболее подходящий голос для языка.
+ * На старых iOS без явного voice браузер может использовать голос по умолчанию (русский).
+ */
+async function findVoice(bcp47: string): Promise<SpeechSynthesisVoice | null> {
+  const voices = await getVoices();
+  const prefix = bcp47.split('-')[0]; // 'en' или 'ru'
+  return (
+    voices.find(v => v.lang === bcp47) ||           // точное совпадение: en-US
+    voices.find(v => v.lang.startsWith(prefix + '-')) || // en-GB, en-AU...
+    voices.find(v => v.lang.startsWith(prefix)) ||  // en
+    null
+  );
+}
+
+/**
  * Озвучить текст через браузерный TTS (Web Speech API).
  * @param text — текст для озвучки
  * @param lang — язык (en / ru)
@@ -17,11 +49,15 @@ export async function playTts(
     currentUtterance = null;
   }
 
+  const bcp47 = lang === 'ru' ? 'ru-RU' : 'en-US';
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = lang === 'ru' ? 'ru-RU' : 'en-US';
+  utterance.lang = bcp47;
   utterance.rate = 0.85; // Немного медленнее для лучшего понимания
   utterance.pitch = 1.0;
-  
+
+  const voice = await findVoice(bcp47);
+  if (voice) utterance.voice = voice;
+
   currentUtterance = utterance;
 
   utterance.onend = () => {

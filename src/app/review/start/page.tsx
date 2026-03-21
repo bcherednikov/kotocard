@@ -145,7 +145,7 @@ export default function GlobalReviewSessionPage() {
             </div>
 
             <div className="absolute w-full h-full" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
-              <div className="bg-gradient-to-br from-green-500 to-teal-600 rounded-2xl shadow-2xl p-12 h-full flex flex-col justify-center">
+              <div className="bg-green-500 bg-gradient-to-br from-green-500 to-teal-600 rounded-2xl shadow-2xl p-12 h-full flex flex-col justify-center">
                 <div className="text-center text-white">
                   <div className="text-6xl mb-6">🇬🇧</div>
                   <div className="flex items-center justify-center gap-4 mb-3">

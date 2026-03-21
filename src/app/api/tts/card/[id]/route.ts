@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { createServerAnonClient } from '@/lib/supabase/server-anon';
 import { generateAndSaveTts } from '@/lib/tts/tts-server';
 import fs from 'fs';
 import path from 'path';
@@ -19,6 +19,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const lang = searchParams.get('lang') === 'ru' ? 'ru' : 'en';
 
+    const supabase = createServerAnonClient();
     // Получить карточку с URL TTS
     const { data: card, error } = await supabase
       .from('cards')

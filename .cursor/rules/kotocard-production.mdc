@@ -1,0 +1,20 @@
+---
+description: KotoCard production URL and Supabase proxy env
+---
+
+# KotoCard production
+
+- **Публичный сайт:** https://kotocard.borische.ru
+- **VPS (деплой):** `scripts/deploy.sh` → `root@45.89.228.209`, каталог `/var/www/kotocard`.
+
+При «Failed to fetch» к Supabase из РФ: браузер ходит на **прокси** на том же домене.
+
+На сервере в `.env.local` / `.env.production`:
+
+- `SUPABASE_URL=https://<ref>.supabase.co` — прямой URL (только сервер, не светить в клиенте как единственный источник при прокси).
+- `NEXT_PUBLIC_SUPABASE_URL=https://kotocard.borische.ru/api/supabase` — база для `@supabase/supabase-js` в браузере (в рантайме клиент подставляет `window.location.origin`, чтобы вход по IP/другому хосту не ломал fetch).
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` и `SUPABASE_SERVICE_ROLE_KEY` без изменений.
+
+В Supabase Dashboard → Authentication → URL configuration: **Site URL** и redirect должны включать `https://kotocard.borische.ru`.
+
+**VPS / DNS:** у хостинга иногда `ENOTFOUND` на `*.supabase.co` (резолвер Yandex/IPv6). В репозитории: `ecosystem.config.cjs` для PM2 с `NODE_OPTIONS=--dns-result-order=ipv4first`, прокси `/api/supabase` с ретраями на сетевые сбои. При необходимости на сервере задать стабильные DNS (1.1.1.1 / 8.8.8.8) в netplan/systemd-resolved.

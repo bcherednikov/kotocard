@@ -187,7 +187,7 @@ export default function MemberStatsPage() {
         </div>
 
         {/* Общая */}
-        <div className="bg-gradient-to-r from-purple-600 to-indigo-700 rounded-2xl p-6 text-white mb-8">
+        <div className="bg-purple-600 bg-gradient-to-r from-purple-600 to-indigo-700 rounded-2xl p-6 text-white mb-8">
           <div className="flex items-center justify-between mb-3">
             <span className="text-lg font-medium">Общий прогресс</span>
             <span className="text-3xl font-bold">{overallPercent}%</span>

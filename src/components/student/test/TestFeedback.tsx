@@ -28,7 +28,7 @@ export function TestFeedback({ isCorrect, correctAnswer, userAnswer, onNext, isL
       <button
         onClick={onNext}
         disabled={isProcessing}
-        className="w-full py-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl font-bold text-xl hover:from-purple-600 hover:to-pink-700 transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full py-4 bg-purple-500 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl font-bold text-xl hover:from-purple-600 hover:to-pink-700 transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isProcessing ? 'Сохраняем...' : isLast ? 'Завершить' : 'Следующий вопрос →'}
       </button>

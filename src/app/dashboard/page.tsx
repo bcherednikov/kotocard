@@ -202,22 +202,22 @@ export default function DashboardPage() {
         {/* Stats */}
         {(totalStats.total > 0 || reviewReady > 0) && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-5 text-white shadow-lg">
+            <div className="bg-green-500 bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-5 text-white shadow-lg">
               <div className="text-2xl mb-1">📝</div>
               <div className="text-3xl font-bold">{totalStats.mastered}</div>
               <div className="text-green-100 text-sm">Выучено слов</div>
             </div>
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 text-white shadow-lg">
+            <div className="bg-blue-500 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 text-white shadow-lg">
               <div className="text-2xl mb-1">📚</div>
               <div className="text-3xl font-bold">{totalStats.total}</div>
               <div className="text-blue-100 text-sm">Всего слов</div>
             </div>
-            <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-5 text-white shadow-lg">
+            <div className="bg-orange-500 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-5 text-white shadow-lg">
               <div className="text-2xl mb-1">🔄</div>
               <div className="text-3xl font-bold">{reviewReady}</div>
               <div className="text-orange-100 text-sm">К повторению</div>
             </div>
-            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-5 text-white shadow-lg">
+            <div className="bg-purple-500 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-5 text-white shadow-lg">
               <div className="text-2xl mb-1">⭐</div>
               <div className="text-3xl font-bold">{totalStats.percent}%</div>
               <div className="text-purple-100 text-sm">Процент освоения</div>
@@ -235,7 +235,7 @@ export default function DashboardPage() {
         {reviewReady > 0 && (
           <Link
             href="/review"
-            className="block mb-8 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl shadow-lg p-6 hover:shadow-2xl transition border-4 border-yellow-400"
+            className="block mb-8 bg-orange-500 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl shadow-lg p-6 hover:shadow-2xl transition border-4 border-yellow-400"
           >
             <div className="text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -323,7 +323,7 @@ function DeckCard({ deck }: { deck: DeckWithStats }) {
   return (
     <Link
       href={`/decks/${deck.id}`}
-      className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-lg p-6 hover:shadow-2xl transition transform hover:scale-105 block"
+      className="bg-blue-500 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-lg p-6 hover:shadow-2xl transition transform hover:scale-105 block"
     >
       <div className="text-white">
         <div className="flex items-start justify-between mb-3">

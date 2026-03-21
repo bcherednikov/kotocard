@@ -1,16 +1,12 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { getServiceRoleClient } from '@/lib/supabase/service-role';
 
 /**
  * POST /api/groups/join — вступить в группу по инвайт-коду
  * Body: { inviteCode, userId }
  */
 export async function POST(request: Request) {
+  const supabaseAdmin = getServiceRoleClient();
   try {
     const { inviteCode, userId } = await request.json();
 

@@ -36,6 +36,9 @@ yarn-error.log*
 # piper-tts venv (symlinks break Next/Turbopack build)
 piper-tts/venv
 
+# BMAD Method — только для локальной разработки, не коммитить и не деплоить
+/bmad
+
 # vercel
 .vercel
 

@@ -262,7 +262,7 @@ export default function DictationPrepPage() {
             </div>
           </>
         ) : (
-          <div className={`rounded-2xl shadow-2xl p-8 text-center ${lastCorrect ? 'bg-gradient-to-br from-green-400 to-green-600' : 'bg-gradient-to-br from-red-400 to-red-600'}`}>
+          <div className={`rounded-2xl shadow-2xl p-8 text-center ${lastCorrect ? 'bg-green-400 bg-gradient-to-br from-green-400 to-green-600' : 'bg-red-400 bg-gradient-to-br from-red-400 to-red-600'}`}>
             <div className="text-white">
               <div className="text-6xl mb-4">{lastCorrect ? '✅' : '❌'}</div>
               <h2 className="text-3xl font-bold mb-4">{lastCorrect ? 'Правильно!' : 'Неправильно'}</h2>

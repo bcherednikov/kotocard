@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { createServerAnonClient } from '@/lib/supabase/server-anon';
 import { generateAndSaveTts } from '@/lib/tts/tts-server';
 
 /**
@@ -13,6 +13,7 @@ export async function POST(
   try {
     const { id: deckId } = await params;
 
+    const supabase = createServerAnonClient();
     // Получить все карточки набора
     const { data: cards, error } = await supabase
       .from('cards')
@@ -100,6 +101,7 @@ export async function GET(
   try {
     const { id: deckId } = await params;
 
+    const supabase = createServerAnonClient();
     const { data: cards, error } = await supabase
       .from('cards')
       .select('id, tts_en_url, tts_ru_url, tts_generated_at')

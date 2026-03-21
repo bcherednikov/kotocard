@@ -36,11 +36,12 @@ function CompletePageContent() {
   let emoji = '👍';
   let message = 'Хорошая работа!';
   let color = 'from-blue-500 to-purple-600';
+  let colorFallback = 'bg-blue-500';
 
-  if (percentage >= 90) { emoji = '🏆'; message = 'Отлично! Ты молодец!'; color = 'from-yellow-400 to-orange-500'; }
-  else if (percentage >= 70) { emoji = '🌟'; message = 'Очень хорошо!'; color = 'from-green-500 to-blue-500'; }
-  else if (percentage >= 50) { emoji = '👍'; message = 'Неплохо! Продолжай учить!'; color = 'from-blue-500 to-purple-600'; }
-  else { emoji = '💪'; message = 'Ничего страшного! Попробуй ещё раз!'; color = 'from-purple-500 to-pink-600'; }
+  if (percentage >= 90) { emoji = '🏆'; message = 'Отлично! Ты молодец!'; color = 'from-yellow-400 to-orange-500'; colorFallback = 'bg-yellow-400'; }
+  else if (percentage >= 70) { emoji = '🌟'; message = 'Очень хорошо!'; color = 'from-green-500 to-blue-500'; colorFallback = 'bg-green-500'; }
+  else if (percentage >= 50) { emoji = '👍'; message = 'Неплохо! Продолжай учить!'; color = 'from-blue-500 to-purple-600'; colorFallback = 'bg-blue-500'; }
+  else { emoji = '💪'; message = 'Ничего страшного! Попробуй ещё раз!'; color = 'from-purple-500 to-pink-600'; colorFallback = 'bg-purple-500'; }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 py-12 px-4">
@@ -56,7 +57,7 @@ function CompletePageContent() {
       )}
 
       <div className="max-w-2xl mx-auto">
-        <div className={`bg-gradient-to-br ${color} rounded-2xl shadow-2xl p-12 mb-8 text-white text-center`}>
+        <div className={`${colorFallback} bg-gradient-to-br ${color} rounded-2xl shadow-2xl p-12 mb-8 text-white text-center`}>
           <div className="text-8xl mb-6">{emoji}</div>
           <h1 className="text-4xl font-bold mb-4">{message}</h1>
           <p className="text-2xl mb-8">Сессия завершена!</p>
@@ -97,7 +98,7 @@ function CompletePageContent() {
           <Link href={`/decks/${deckId}`} className="py-4 bg-white text-center rounded-xl font-bold text-lg hover:bg-gray-50 transition shadow-lg text-gray-700">
             ← Назад к набору
           </Link>
-          <Link href={`/decks/${deckId}/study`} className="py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-center rounded-xl font-bold text-lg hover:from-blue-600 hover:to-purple-700 transition shadow-lg">
+          <Link href={`/decks/${deckId}/study`} className="py-4 bg-blue-500 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-center rounded-xl font-bold text-lg hover:from-blue-600 hover:to-purple-700 transition shadow-lg">
             Повторить →
           </Link>
         </div>

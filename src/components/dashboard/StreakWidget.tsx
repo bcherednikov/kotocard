@@ -17,7 +17,7 @@ export function StreakWidget({ streak, today, last7 }: Props) {
     <div
       className={`rounded-xl p-5 shadow-lg mb-8 ${
         hasStreak
-          ? 'bg-gradient-to-br from-orange-500 to-red-600 text-white'
+          ? 'bg-orange-500 bg-gradient-to-br from-orange-500 to-red-600 text-white'
           : 'bg-gradient-to-br from-gray-200 to-gray-300 text-gray-700'
       }`}
     >

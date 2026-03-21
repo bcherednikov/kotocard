@@ -6,16 +6,34 @@
 set -e
 REMOTE="root@45.89.228.209"
 APP_DIR="/var/www/kotocard"
-# Один сокет для rsync и ssh — пароль один раз
-SSH_OPTS="-o ControlMaster=auto -o ControlPath=/tmp/ssh-kotocard-%r@%h:%p -o ControlPersist=60"
+SSH_OPTS="-o ControlMaster=auto -o ControlPath=/tmp/ssh-kotocard-%r@%h:%p -o ControlPersist=60 -o ServerAliveInterval=30 -o ServerAliveCountMax=120"
 
-echo "📦 Синхронизация файлов..."
+# ── 1. Читаем prod-переменные с сервера ──────────────────────────────────────
+echo "🔑 Читаю env с сервера..."
+PROD_ENV=$(ssh $SSH_OPTS "$REMOTE" "cat $APP_DIR/.env.production 2>/dev/null || cat $APP_DIR/.env.local 2>/dev/null || true")
+if [ -z "$PROD_ENV" ]; then
+  echo "Ошибка: на сервере нет $APP_DIR/.env.production и нет $APP_DIR/.env.local."
+  exit 1
+fi
+eval "$(echo "$PROD_ENV" | grep -E '^(NEXT_PUBLIC_SUPABASE_URL|NEXT_PUBLIC_SUPABASE_ANON_KEY)=' | sed 's/^/export /')"
+if [ -z "${NEXT_PUBLIC_SUPABASE_URL:-}" ] || [ -z "${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}" ]; then
+  echo "Ошибка: в prod env на сервере нет NEXT_PUBLIC_SUPABASE_URL или NEXT_PUBLIC_SUPABASE_ANON_KEY."
+  exit 1
+fi
+
+# ── 2. Локальная сборка (на Mac — быстро, без OOM) ───────────────────────────
+echo "🔨 Локальная сборка с prod-переменными..."
+npm run build
+
+# ── 3. Синхронизируем код (без node_modules и .env) ─────────────────────────
+echo "📦 Синхронизация кода..."
 rsync -avz -e "ssh $SSH_OPTS" \
-  --exclude 'node_modules' --exclude '.next' --exclude '.git' --exclude '.env.local' --exclude 'piper-tts/venv' \
+  --exclude 'node_modules' --exclude '.git' --exclude '.env.local' --exclude 'piper-tts/venv' --exclude 'bmad' \
   ./ "$REMOTE:$APP_DIR/"
 
-echo "🔨 Сборка и перезапуск на сервере..."
-ssh $SSH_OPTS "$REMOTE" "cd $APP_DIR && rm -rf piper-tts/venv && npm ci && npm run build && cd piper-tts && python3 -m venv venv && source venv/bin/activate && pip install -q --upgrade pip && pip install -q -r requirements.txt && deactivate && cd .. && pm2 restart kotocard"
+# ── 4. На сервере: deps + перезапуск ────────────────────────────────────────
+echo "🚀 Перезапуск на сервере..."
+ssh $SSH_OPTS "$REMOTE" "cd $APP_DIR && npm ci --omit=dev && (pm2 delete kotocard 2>/dev/null || true) && pm2 start ecosystem.config.cjs && pm2 save"
 
-echo "Готово. Сайт: http://45.89.228.209"
+echo "✅ Готово. Прод: https://kotocard.borische.ru"
 

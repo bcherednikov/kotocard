@@ -65,7 +65,7 @@ function ReviewCompleteContent() {
           )}
 
           <div className="flex gap-4">
-            <Link href="/review/start" className="flex-1 py-4 bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-xl font-bold text-lg hover:from-green-600 hover:to-teal-700 transition shadow-lg text-center">
+            <Link href="/review/start" className="flex-1 py-4 bg-green-500 bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-xl font-bold text-lg hover:from-green-600 hover:to-teal-700 transition shadow-lg text-center">
               Повторить ещё
             </Link>
             <Link href="/dashboard" className="flex-1 py-4 border-2 border-gray-300 text-gray-700 rounded-xl font-bold text-lg hover:bg-gray-50 transition text-center">

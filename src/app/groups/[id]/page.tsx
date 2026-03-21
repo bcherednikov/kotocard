@@ -168,7 +168,7 @@ export default function GroupDetailPage() {
         </div>
 
         {/* Шапка группы */}
-        <div className="bg-gradient-to-r from-purple-600 to-indigo-700 rounded-2xl p-8 text-white mb-8">
+        <div className="bg-purple-600 bg-gradient-to-r from-purple-600 to-indigo-700 rounded-2xl p-8 text-white mb-8">
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-3xl font-bold mb-2">{group.name}</h1>
@@ -239,7 +239,7 @@ export default function GroupDetailPage() {
             {members.map(member => (
               <div key={member.id} className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-bold">
+                  <div className="w-10 h-10 bg-purple-400 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-bold">
                     {member.display_name[0]?.toUpperCase()}
                   </div>
                   <div>

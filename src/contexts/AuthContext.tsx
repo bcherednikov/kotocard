@@ -38,6 +38,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const currentUserIdRef = useRef<string | null>(null);
+  /** Без этого первый колбэк с session=null даёт null===null и ранний return — isInitialized никогда не true. */
+  const noSessionHandledRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Инициализация - один раз при монтировании
@@ -78,8 +80,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const newUserId = newUser?.id ?? null;
 
-      // Если тот же пользователь - ничего не делаем
-      if (newUserId === currentUserIdRef.current) return;
+      const sameId = newUserId === currentUserIdRef.current;
+      // Повтор для того же залогиненного пользователя — пропускаем; для «оба null» первый раз обязаны отработать.
+      if (sameId && (newUserId !== null || noSessionHandledRef.current)) return;
 
       // Отменяем предыдущий запрос
       if (abortControllerRef.current) {
@@ -114,8 +117,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
         setIsLoading(false);
         setIsInitialized(true);
+        noSessionHandledRef.current = true;
       }
     }
+
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      if (mounted) void handleAuthChange(session?.user ?? null);
+    });
 
     // Подписка на auth события
     const { data: { subscription } } = supabase.auth.onAuthStateChange(

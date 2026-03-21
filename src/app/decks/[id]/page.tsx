@@ -169,7 +169,7 @@ export default function DeckDetailPage() {
         </div>
 
         {/* Deck header with SRS progress */}
-        <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-2xl p-8 mb-8 text-white">
+        <div className="bg-blue-500 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-2xl p-8 mb-8 text-white">
           <div className="flex justify-between items-start mb-4">
             <div className="flex-1">
               <h1 className="text-3xl font-bold mb-2">{deck.name}</h1>
@@ -295,7 +295,7 @@ export default function DeckDetailPage() {
               <div className="flex gap-3">
                 <Link
                   href={`/decks/${deckId}/cards/bulk`}
-                  className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg font-medium hover:from-purple-600 hover:to-pink-700 transition"
+                  className="px-4 py-2 bg-purple-500 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg font-medium hover:from-purple-600 hover:to-pink-700 transition"
                 >
                   ✨ Массовое создание
                 </Link>
@@ -315,7 +315,7 @@ export default function DeckDetailPage() {
                 <div className="flex gap-3 justify-center">
                   <Link
                     href={`/decks/${deckId}/cards/bulk`}
-                    className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-pink-700 transition"
+                    className="px-6 py-3 bg-purple-500 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-pink-700 transition"
                   >
                     ✨ Массовое создание
                   </Link>

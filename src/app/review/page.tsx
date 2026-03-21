@@ -55,7 +55,7 @@ export default function ReviewLandingPage() {
               <p className="text-xl text-gray-700 mb-6">изученных карточек</p>
               <Link
                 href="/review/start"
-                className="inline-block px-8 py-4 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-xl font-bold text-xl hover:from-orange-600 hover:to-red-700 transition shadow-lg"
+                className="inline-block px-8 py-4 bg-orange-500 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-xl font-bold text-xl hover:from-orange-600 hover:to-red-700 transition shadow-lg"
               >
                 Начать повторение
               </Link>

@@ -1,20 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import translate from 'translate';
+import { getServiceRoleClient } from '@/lib/supabase/service-role';
+import { supabaseDirectUrl } from '@/lib/supabase/direct-url';
 
 // Настройка translate (использовать Google по умолчанию)
 translate.engine = 'google';
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
 
 // Определить язык текста
 function detectLanguage(text: string): 'ru' | 'en' {
@@ -24,12 +15,13 @@ function detectLanguage(text: string): 'ru' | 'en' {
 }
 
 export async function POST(request: Request) {
+  const supabaseAdmin = getServiceRoleClient();
   try {
     const { deckId, text, parentToken } = await request.json();
 
     // Проверить авторизацию
     const supabaseClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      supabaseDirectUrl(),
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
     
