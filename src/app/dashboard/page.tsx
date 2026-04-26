@@ -1,347 +1,572 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import { getDecksSrsStats, getReviewCount } from '@/lib/srs/queries';
-import { DeckSrsProgress } from '@/components/student/DeckSrsProgress';
 import type { DeckSrsStats } from '@/lib/srs/types';
-import { StreakWidget } from '@/components/dashboard/StreakWidget';
-import { AnalyticsSection } from '@/components/dashboard/AnalyticsSection';
-import { RecentAchievements } from '@/components/dashboard/RecentAchievements';
-import { getStreakData, getTodayActivity, getLast7Days, getUserAchievements } from '@/lib/analytics/queries';
-import type { StreakData, TodayProgress, Last7Days, UserAchievementRow } from '@/lib/analytics/types';
+import { getStreakData, getTodayActivity, getLast7Days } from '@/lib/analytics/queries';
+import type { StreakData, TodayProgress, Last7Days } from '@/lib/analytics/types';
+import { motion, AnimatePresence, useSpring, useTransform, type MotionValue, useInView } from 'motion/react';
 
-type Deck = {
-  id: string;
-  name: string;
-  description: string | null;
-  tags: string[];
-  owner_id: string;
-};
-
+/* ─── Types ─── */
+type Deck = { id: string; name: string; description: string | null; tags: string[]; owner_id: string };
 type DeckWithStats = Deck & { stats: DeckSrsStats };
+type GroupWithDecks = { id: string; name: string; decks: DeckWithStats[] };
 
-type GroupWithDecks = {
-  id: string;
-  name: string;
-  decks: DeckWithStats[];
-};
-
-const emptySrsStats: DeckSrsStats = {
+const emptySrs: DeckSrsStats = {
   total: 0, newCount: 0, learningCount: 0, testingCount: 0,
   youngCount: 0, matureCount: 0, relearningCount: 0,
   masteredCount: 0, masteryPercent: 0, readyForReview: 0, readyForTesting: 0,
 };
 
-export default function DashboardPage() {
-  const { user, profile } = useAuth();
+/* ─── Animated number ─── */
+function Num({ value }: { value: number }) {
+  const spring = useSpring(0, { mass: 0.6, stiffness: 80, damping: 16 });
+  const display: MotionValue<string> = useTransform(spring, (v: number) => Math.round(v).toLocaleString('ru-RU'));
+  useEffect(() => { spring.set(value); }, [spring, value]);
+  return <motion.span>{display}</motion.span>;
+}
+
+/* ─── Цвет карточки по этапу ───
+   Изучение     → amber  (жёлтый)
+   Тестирование → indigo (синий)
+   Повторение   → teal   (зелёный)
+─────────────────────────────── */
+const STAGE_PAL = {
+  'Изучение':     { border: 'border-l-amber-400',  iconBg: 'bg-amber-50',  dot: 'bg-amber-400',  bar: 'bg-amber-400',  stage: 'text-amber-500'  },
+  'Тестирование': { border: 'border-l-indigo-400', iconBg: 'bg-indigo-50', dot: 'bg-indigo-400', bar: 'bg-indigo-500', stage: 'text-indigo-500' },
+  'Повторение':   { border: 'border-l-teal-500',   iconBg: 'bg-teal-50',   dot: 'bg-teal-500',   bar: 'bg-teal-500',   stage: 'text-teal-600'   },
+} as const;
+
+function getDeckStage(s: DeckSrsStats): { label: string; percent: number } {
+  if (s.total === 0) return { label: 'Изучение', percent: 0 };
+  if (s.masteryPercent === 100) return { label: 'Завершён', percent: 100 };
+  const rv = (s.youngCount + s.matureCount) / s.total;
+  const ts = (s.learningCount + s.testingCount + s.youngCount + s.matureCount) / s.total;
+  if (rv > 0.3) return { label: 'Повторение', percent: Math.round(rv * 100) };
+  if (ts > 0.1) return { label: 'Тестирование', percent: Math.round(ts * 100) };
+  return { label: 'Изучение', percent: s.masteryPercent };
+}
+
+/* ─── Nav items ─── */
+const NAV = [
+  { href: '/dashboard', label: 'Главная',    d: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+  { href: '/decks',         label: 'Мои наборы', d: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
+  { href: '/grammar',       label: 'Правила',    d: 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z' },
+  { href: '/achievements',  label: 'Достижения', d: 'M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z' },
+  { href: '/groups',        label: 'Группы',     d: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z' },
+];
+
+/* ─── Review widget (используется в сайдбаре и в мобильном блоке) ─── */
+function ReviewWidget({ count }: { count: number }) {
+  return (
+    <Link href="/review">
+      <motion.div
+        whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+        className="relative overflow-hidden rounded-2xl p-4 cursor-pointer"
+        style={{ background: 'linear-gradient(135deg, #057A55 0%, #065f46 100%)' }}
+      >
+        <motion.div
+          animate={{ x: ['-100%', '200%'] }}
+          transition={{ duration: 3, repeat: Infinity, ease: 'linear', repeatDelay: 2 }}
+          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 pointer-events-none"
+        />
+        <div className="relative">
+          <p className="text-white/70 text-xs font-medium mb-0.5 uppercase tracking-wide">К повторению</p>
+          <p className="text-white font-black text-2xl leading-none mb-3">
+            <Num value={count} />
+            <span className="text-sm font-normal text-white/60 ml-1">карточек</span>
+          </p>
+          <div className="flex items-center gap-1.5 text-white text-xs font-semibold">
+            Начать
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+          </div>
+        </div>
+      </motion.div>
+    </Link>
+  );
+}
+
+/* ─── Desktop sidebar ─── */
+function Sidebar({ name, reviewCount, onSignOut }: { name: string; reviewCount: number; onSignOut: () => void }) {
+  const pathname = usePathname();
+  return (
+    <aside className="hidden md:flex w-52 shrink-0 flex-col h-screen sticky top-0 bg-white border-r border-gray-100">
+      <div className="px-5 pt-6 pb-5">
+        <Link href="/dashboard" className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-[#057A55] flex items-center justify-center">
+            <span className="text-white text-xs font-black">К</span>
+          </div>
+          <span className="font-bold text-gray-900">KotoCard</span>
+        </Link>
+      </div>
+
+      <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
+        {NAV.map(({ href, label, d }) => {
+          const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href + '/'));
+          return (
+            <Link key={href} href={href}
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                active ? 'bg-[#057A55]/10 text-[#057A55]' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+              }`}
+            >
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.7} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d={d} />
+              </svg>
+              {label}
+            </Link>
+          );
+        })}
+        <div className="pt-4 pb-1">
+          <ReviewWidget count={reviewCount} />
+        </div>
+      </nav>
+
+      <div className="px-3 py-4 border-t border-gray-100">
+        <div className="flex items-center gap-2.5 px-3 py-2">
+          <div className="w-7 h-7 rounded-full bg-[#057A55]/15 flex items-center justify-center text-[#057A55] text-xs font-bold uppercase shrink-0">
+            {name.charAt(0)}
+          </div>
+          <span className="text-sm font-medium text-gray-700 truncate">{name}</span>
+        </div>
+        <button onClick={onSignOut}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.7} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          Выйти
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+/* ─── Mobile header ─── */
+function MobileHeader({ onMenu }: { onMenu: () => void }) {
+  return (
+    <header className="md:hidden sticky top-0 z-30 bg-white border-b border-gray-100 flex items-center justify-between px-4 h-13">
+      <Link href="/dashboard" className="flex items-center gap-2">
+        <div className="w-7 h-7 rounded-lg bg-[#057A55] flex items-center justify-center">
+          <span className="text-white text-xs font-black">К</span>
+        </div>
+        <span className="font-bold text-gray-900 text-sm">KotoCard</span>
+      </Link>
+      <button onClick={onMenu} className="w-9 h-9 flex flex-col justify-center items-center gap-1.5 rounded-xl hover:bg-gray-50 transition" aria-label="Меню">
+        <span className="w-5 h-0.5 bg-gray-700 rounded-full" />
+        <span className="w-5 h-0.5 bg-gray-700 rounded-full" />
+        <span className="w-3.5 h-0.5 bg-gray-700 rounded-full" />
+      </button>
+    </header>
+  );
+}
+
+/* ─── Mobile drawer ─── */
+function MobileDrawer({ open, name, reviewCount, onClose, onSignOut }: {
+  open: boolean; name: string; reviewCount: number; onClose: () => void; onSignOut: () => void;
+}) {
+  const pathname = usePathname();
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="md:hidden fixed inset-0 bg-black/40 z-40"
+            onClick={onClose}
+          />
+          {/* Drawer */}
+          <motion.div
+            initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }}
+            transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+            className="md:hidden fixed left-0 top-0 bottom-0 w-64 bg-white z-50 flex flex-col shadow-2xl"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-5 border-b border-gray-100">
+              <Link href="/dashboard" onClick={onClose} className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-[#057A55] flex items-center justify-center">
+                  <span className="text-white text-xs font-black">К</span>
+                </div>
+                <span className="font-bold text-gray-900">KotoCard</span>
+              </Link>
+              <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-50 transition text-gray-400">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Nav */}
+            <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
+              {NAV.map(({ href, label, d }) => {
+                const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href + '/'));
+                return (
+                  <Link key={href} href={href} onClick={onClose}
+                    className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${
+                      active ? 'bg-[#057A55]/10 text-[#057A55]' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                    }`}
+                  >
+                    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.7} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d={d} />
+                    </svg>
+                    {label}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {/* User + sign out */}
+            <div className="px-3 py-4 border-t border-gray-100">
+              <div className="flex items-center gap-2.5 px-3 py-2 mb-1">
+                <div className="w-8 h-8 rounded-full bg-[#057A55]/15 flex items-center justify-center text-[#057A55] text-sm font-bold uppercase shrink-0">
+                  {name.charAt(0)}
+                </div>
+                <span className="text-sm font-medium text-gray-700 truncate">{name}</span>
+              </div>
+              <button onClick={onSignOut}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.7} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Выйти
+              </button>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
+
+/* ─── Deck card ─── */
+function DeckCard({ deck, delay = 0 }: { deck: DeckWithStats; delay?: number }) {
+  const stage = getDeckStage(deck.stats);
+  const pal = STAGE_PAL[stage.label as keyof typeof STAGE_PAL] ?? STAGE_PAL['Изучение'];
+  const { total, masteryPercent, readyForReview } = deck.stats;
+  const mastered = masteryPercent === 100 && total > 0;
+
+  if (mastered) {
+    return (
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, delay, ease: [0.22, 1, 0.36, 1] }}>
+        <Link href={`/decks/${deck.id}`}>
+          <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.2 }}
+            className="relative overflow-hidden rounded-2xl p-4 h-full cursor-pointer"
+            style={{ background: 'linear-gradient(135deg, #057A55 0%, #065f46 100%)' }}
+          >
+            <motion.div animate={{ opacity: [0.3, 0.6, 0.3] }} transition={{ duration: 3, repeat: Infinity }}
+              className="absolute -right-4 -top-4 w-20 h-20 bg-white/10 rounded-full" />
+            <div className="relative">
+              <span className="inline-flex items-center gap-1 text-xs font-semibold bg-amber-400/20 text-amber-300 rounded-full px-2 py-0.5 mb-2">
+                ★ Завершён
+              </span>
+              <h3 className="font-bold text-white text-sm leading-snug mb-1">{deck.name}</h3>
+              {deck.description && <p className="text-white/50 text-xs line-clamp-1 mb-2">{deck.description}</p>}
+              <div className="text-white/60 text-xs">{total} / {total} слов</div>
+              <div className="w-full h-1 bg-white/20 rounded-full mt-1.5">
+                <div className="h-full bg-amber-400 rounded-full w-full" />
+              </div>
+            </div>
+          </motion.div>
+        </Link>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay, ease: [0.22, 1, 0.36, 1] }}>
+      <Link href={`/decks/${deck.id}`}>
+        <motion.div whileHover={{ y: -2, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }} transition={{ duration: 0.2 }}
+          className={`bg-white rounded-2xl border-l-4 ${pal.border} border-t border-r border-b border-gray-100 p-4 h-full cursor-pointer group shadow-sm`}
+        >
+          <div className="flex items-start justify-between mb-2.5">
+            <div className={`w-7 h-7 ${pal.iconBg} rounded-lg flex items-center justify-center`}>
+              <div className={`w-2 h-2 ${pal.dot} rounded-full`} />
+            </div>
+            {readyForReview > 0 && (
+              <span className="text-xs font-semibold bg-orange-50 text-orange-500 rounded-full px-2 py-0.5 border border-orange-100">
+                {readyForReview}
+              </span>
+            )}
+          </div>
+          <h3 className="font-bold text-gray-900 text-sm leading-snug mb-0.5 group-hover:text-[#057A55] transition-colors line-clamp-2">
+            {deck.name}
+          </h3>
+          {deck.description && <p className="text-gray-400 text-xs mb-2.5 line-clamp-1">{deck.description}</p>}
+          {total > 0 && (
+            <div className="mt-auto">
+              <div className="flex items-center justify-between mb-1">
+                <span className={`text-xs font-semibold ${pal.stage}`}>{stage.label}</span>
+                <span className="text-xs text-gray-400">{stage.percent}%</span>
+              </div>
+              <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <motion.div className={`h-full ${pal.bar} rounded-full`}
+                  initial={{ width: 0 }} animate={{ width: `${stage.percent}%` }}
+                  transition={{ duration: 0.6, ease: 'easeOut', delay: delay + 0.15 }} />
+              </div>
+              <div className="text-[11px] text-gray-400 mt-1">{deck.stats.masteredCount} / {total}</div>
+            </div>
+          )}
+        </motion.div>
+      </Link>
+    </motion.div>
+  );
+}
+
+/* ─── Analytics strip ─── */
+function AnalyticsStrip({ streak, last7, today, totalMastered, wordsThisWeek }: {
+  streak: StreakData; last7: Last7Days[]; today: TodayProgress;
+  totalMastered: number; wordsThisWeek: number;
+}) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true });
+  const todayPct = Math.min(100, (today.total / today.goal) * 100);
+
+  return (
+    <motion.div ref={ref} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}
+      className="flex items-center gap-4 mb-6 flex-wrap"
+    >
+      <div className="flex items-center gap-1">
+        <span className="text-sm">🔥</span>
+        <span className="text-sm font-bold text-gray-800">{inView ? <Num value={streak.currentStreak} /> : 0}</span>
+        <span className="text-xs text-gray-400">дн.</span>
+      </div>
+      <div className="w-px h-3.5 bg-gray-200" />
+      <div className="flex items-center gap-1">
+        <span className="text-sm font-bold text-gray-800">{inView ? <Num value={totalMastered} /> : 0}</span>
+        <span className="text-xs text-gray-400">выучено</span>
+      </div>
+      <div className="w-px h-3.5 bg-gray-200" />
+      <div className="flex items-center gap-1">
+        <span className="text-sm font-bold text-gray-800">{inView ? <Num value={wordsThisWeek} /> : 0}</span>
+        <span className="text-xs text-gray-400">за неделю</span>
+      </div>
+      <div className="w-px h-3.5 bg-gray-200 hidden sm:block" />
+      {last7.length > 0 && (
+        <div className="hidden sm:flex items-center gap-0.5">
+          {last7.map((d, i) => (
+            <motion.div key={d.date} initial={{ scale: 0 }} animate={inView ? { scale: 1 } : {}}
+              transition={{ delay: 0.04 * i, duration: 0.15 }}
+              className={`w-3.5 h-3.5 rounded-[3px] ${d.completed ? 'bg-[#057A55]' : 'bg-gray-200'}`}
+              title={d.dayLabel} />
+          ))}
+        </div>
+      )}
+      <div className="w-px h-3.5 bg-gray-200 hidden sm:block" />
+      <div className="hidden sm:flex items-center gap-2">
+        <span className="text-xs text-gray-400">Цель {today.total}/{today.goal}</span>
+        <div className="w-20 h-1 bg-gray-100 rounded-full overflow-hidden">
+          <motion.div className={`h-full rounded-full ${today.completed ? 'bg-[#057A55]' : 'bg-amber-400'}`}
+            initial={{ width: 0 }} animate={inView ? { width: `${todayPct}%` } : {}}
+            transition={{ duration: 0.6, ease: 'easeOut', delay: 0.3 }} />
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ─── Main page ─── */
+export default function DashboardV4Page() {
+  const { user, profile, signOut } = useAuth();
+  const router = useRouter();
   const [myDecks, setMyDecks] = useState<DeckWithStats[]>([]);
   const [groupSections, setGroupSections] = useState<GroupWithDecks[]>([]);
-  const [totalStats, setTotalStats] = useState({ mastered: 0, total: 0, percent: 0 });
   const [reviewReady, setReviewReady] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [streak, setStreak] = useState<StreakData>({ currentStreak: 0, longestStreak: 0, lastActiveDate: null });
+  const [today, setToday] = useState<TodayProgress>({ wordsStudied: 0, reviewsCompleted: 0, total: 0, goal: 10, completed: false });
+  const [last7, setLast7] = useState<Last7Days[]>([]);
+  const [totalMastered, setTotalMastered] = useState(0);
+  const [wordsThisWeek, setWordsThisWeek] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  // Analytics state
-  const [streakData, setStreakData] = useState<StreakData>({ currentStreak: 0, longestStreak: 0, lastActiveDate: null });
-  const [todayProgress, setTodayProgress] = useState<TodayProgress>({ wordsStudied: 0, reviewsCompleted: 0, total: 0, goal: 10, completed: false });
-  const [last7Days, setLast7Days] = useState<Last7Days[]>([]);
-  const [achievements, setAchievements] = useState<UserAchievementRow[]>([]);
+  useEffect(() => { if (user && profile) load(); }, [user, profile]);
 
-  useEffect(() => {
-    if (user && profile) loadData();
-  }, [user, profile]);
-
-  async function loadData() {
-    if (!user || !profile) return;
-
+  async function load() {
+    if (!user) return;
     try {
-      // Load personal decks (owner_id = me)
-      const { data: ownDecks, error: ownErr } = await supabase
-        .from('decks')
-        .select('id, name, description, tags, owner_id')
-        .eq('owner_id', user.id)
-        .order('created_at', { ascending: false });
+      const { data: ownDecks } = await supabase
+        .from('decks').select('id, name, description, tags, owner_id')
+        .eq('owner_id', user.id).order('created_at', { ascending: false });
 
-      if (ownErr) throw ownErr;
-
-      // Load group decks organized by group
       const groupMap = new Map<string, { id: string; name: string; decks: Deck[] }>();
       const allGroupDecks: Deck[] = [];
       const { data: myGroups } = await supabase
-        .from('group_members')
-        .select('group_id, groups(id, name)')
-        .eq('user_id', user.id);
+        .from('group_members').select('group_id, groups(id, name)').eq('user_id', user.id);
 
-      if (myGroups && myGroups.length > 0) {
-        const groupIds = myGroups.map(g => g.group_id);
+      if (myGroups?.length) {
         for (const mg of myGroups) {
           const g = mg.groups as any;
           if (g) groupMap.set(g.id, { id: g.id, name: g.name, decks: [] });
         }
-
         const { data: gDecks } = await supabase
-          .from('group_decks')
-          .select('group_id, deck:decks(id, name, description, tags, owner_id)')
-          .in('group_id', groupIds);
-
+          .from('group_decks').select('group_id, deck:decks(id, name, description, tags, owner_id)')
+          .in('group_id', myGroups.map(g => g.group_id));
         if (gDecks) {
           const seen = new Set<string>();
           for (const gd of gDecks) {
             const d = gd.deck as unknown as Deck;
             if (!d) continue;
-            const entry = groupMap.get(gd.group_id);
-            if (entry) entry.decks.push(d);
-            if (!seen.has(d.id)) {
-              seen.add(d.id);
-              allGroupDecks.push(d);
-            }
+            groupMap.get(gd.group_id)?.decks.push(d);
+            if (!seen.has(d.id)) { seen.add(d.id); allGroupDecks.push(d); }
           }
         }
       }
 
       const allDecks = [...(ownDecks || []), ...allGroupDecks];
-      const allDeckIds = allDecks.map(d => d.id);
+      const ids = allDecks.map(d => d.id);
 
-      // Load SRS stats + review count + analytics in parallel
-      const [statsMap, reviewCount, streak, today, last7, userAchievements] = await Promise.all([
-        allDeckIds.length > 0
-          ? getDecksSrsStats(supabase, user.id, allDeckIds)
-          : Promise.resolve(new Map<string, DeckSrsStats>()),
+      const [statsMap, rc, st, td, l7] = await Promise.all([
+        ids.length ? getDecksSrsStats(supabase, user.id, ids) : Promise.resolve(new Map<string, DeckSrsStats>()),
         getReviewCount(supabase, user.id),
         getStreakData(supabase, user.id).catch(() => ({ currentStreak: 0, longestStreak: 0, lastActiveDate: null } as StreakData)),
         getTodayActivity(supabase, user.id).catch(() => ({ wordsStudied: 0, reviewsCompleted: 0, total: 0, goal: 10, completed: false } as TodayProgress)),
         getLast7Days(supabase, user.id).catch(() => [] as Last7Days[]),
-        getUserAchievements(supabase, user.id).catch(() => [] as UserAchievementRow[]),
       ]);
 
-      const withStats = (decks: Deck[]): DeckWithStats[] =>
-        decks.map(d => ({ ...d, stats: statsMap.get(d.id) ?? emptySrsStats }));
+      const ws = (decks: Deck[]) => decks.map(d => ({ ...d, stats: statsMap.get(d.id) ?? emptySrs }));
+      const allWS = ws(allDecks);
+      let mastered = 0, week = 0;
+      for (const d of allWS) mastered += d.stats.masteredCount;
+      for (const d of l7) if (d.completed) week++;
 
-      const allWithStats = withStats(allDecks);
-      let totalMastered = 0, totalCards = 0;
-      for (const d of allWithStats) {
-        totalMastered += d.stats.masteredCount;
-        totalCards += d.stats.total;
-      }
-      setTotalStats({
-        mastered: totalMastered,
-        total: totalCards,
-        percent: totalCards === 0 ? 0 : Math.round((totalMastered / totalCards) * 100),
-      });
-
-      setMyDecks(withStats(ownDecks || []));
-      const sections: GroupWithDecks[] = [];
-      for (const [, entry] of groupMap) {
-        if (entry.decks.length > 0) {
-          sections.push({ id: entry.id, name: entry.name, decks: withStats(entry.decks) });
-        }
-      }
-      setGroupSections(sections);
-      setReviewReady(reviewCount);
-
-      // Set analytics state
-      setStreakData(streak);
-      setTodayProgress(today);
-      setLast7Days(last7);
-      setAchievements(userAchievements);
-
-      setError(null);
-    } catch (err: any) {
-      console.error('Dashboard load error:', err);
-      setError(err.message || 'Ошибка загрузки');
-    } finally {
-      setLoading(false);
-    }
+      setMyDecks(ws(ownDecks || []));
+      const secs: GroupWithDecks[] = [];
+      for (const [, e] of groupMap) if (e.decks.length) secs.push({ id: e.id, name: e.name, decks: ws(e.decks) });
+      setGroupSections(secs);
+      setReviewReady(rc);
+      setStreak(st); setToday(td); setLast7(l7);
+      setTotalMastered(mastered); setWordsThisWeek(week);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
   }
 
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-16 text-center">
-        <p className="text-xl text-gray-800">Загрузка...</p>
-      </div>
-    );
-  }
+  const displayName = profile?.display_name ?? user?.email ?? '';
+  const hasContent = myDecks.length > 0 || groupSections.length > 0;
 
-  if (error) {
-    return (
-      <div className="container mx-auto px-4 py-16">
-        <div className="max-w-md mx-auto bg-red-50 border border-red-200 rounded-xl p-8 text-center">
-          <div className="text-5xl mb-4">&#10060;</div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Ошибка</h2>
-          <p className="text-gray-700 mb-6">{error}</p>
-          <button
-            onClick={() => loadData()}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
-          >
-            Попробовать снова
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const handleSignOut = async () => { await signOut(); router.push('/login'); };
 
-  const hasNoDecks = myDecks.length === 0 && groupSections.length === 0;
-
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Привет, {profile?.display_name}!
-          </h1>
-        </div>
-
-        {/* Streak Widget */}
-        {last7Days.length > 0 && (
-          <StreakWidget streak={streakData} today={todayProgress} last7={last7Days} />
-        )}
-
-        {/* Stats */}
-        {(totalStats.total > 0 || reviewReady > 0) && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-green-500 bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-5 text-white shadow-lg">
-              <div className="text-2xl mb-1">📝</div>
-              <div className="text-3xl font-bold">{totalStats.mastered}</div>
-              <div className="text-green-100 text-sm">Выучено слов</div>
-            </div>
-            <div className="bg-blue-500 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 text-white shadow-lg">
-              <div className="text-2xl mb-1">📚</div>
-              <div className="text-3xl font-bold">{totalStats.total}</div>
-              <div className="text-blue-100 text-sm">Всего слов</div>
-            </div>
-            <div className="bg-orange-500 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-5 text-white shadow-lg">
-              <div className="text-2xl mb-1">🔄</div>
-              <div className="text-3xl font-bold">{reviewReady}</div>
-              <div className="text-orange-100 text-sm">К повторению</div>
-            </div>
-            <div className="bg-purple-500 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-5 text-white shadow-lg">
-              <div className="text-2xl mb-1">⭐</div>
-              <div className="text-3xl font-bold">{totalStats.percent}%</div>
-              <div className="text-purple-100 text-sm">Процент освоения</div>
-            </div>
-          </div>
-        )}
-
-        {/* Analytics Section */}
-        {user && <AnalyticsSection supabase={supabase} userId={user.id} />}
-
-        {/* Recent Achievements */}
-        <RecentAchievements achievements={achievements} />
-
-        {/* Review widget */}
-        {reviewReady > 0 && (
-          <Link
-            href="/review"
-            className="block mb-8 bg-orange-500 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl shadow-lg p-6 hover:shadow-2xl transition border-4 border-yellow-400"
-          >
-            <div className="text-white flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="text-3xl">🔄</div>
-                <div>
-                  <h3 className="text-2xl font-bold">Повторение</h3>
-                  <p className="text-orange-100 text-sm">
-                    Карточки из всех наборов, которые пора повторить
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <span className="text-lg font-semibold">
-                  {reviewReady} к повторению
-                </span>
-                <div className="text-2xl mt-1">→</div>
-              </div>
-            </div>
-          </Link>
-        )}
-
-        {hasNoDecks ? (
-          <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-            <div className="text-6xl mb-4">📚</div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              Пока нет наборов
-            </h2>
-            <p className="text-gray-700 mb-6">
-              Создайте первый набор карточек для обучения
-            </p>
-            <Link
-              href="/decks/new"
-              className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
-            >
-              Создать первый набор
-            </Link>
-          </div>
-        ) : (
-          <>
-            {/* My decks */}
-            {myDecks.length > 0 && (
-              <section className="mb-10">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold text-gray-900">Мои наборы</h2>
-                  <Link
-                    href="/decks"
-                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                  >
-                    Все наборы →
-                  </Link>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {myDecks.map((deck) => (
-                    <DeckCard key={deck.id} deck={deck} />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Group decks by group */}
-            {groupSections.map(group => (
-              <section key={group.id} className="mb-10">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-lg">👥</span>
-                  <h2 className="text-xl font-bold text-gray-900">{group.name}</h2>
-                  <Link href={`/groups/${group.id}`} className="text-blue-600 hover:text-blue-800 text-sm font-medium ml-auto">
-                    Открыть группу →
-                  </Link>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {group.decks.map((deck) => (
-                    <DeckCard key={deck.id} deck={deck} />
-                  ))}
-                </div>
-              </section>
-            ))}
-          </>
-        )}
-      </div>
+  if (loading) return (
+    <div className="flex h-screen bg-[#F7F5F0] items-center justify-center">
+      <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.4, repeat: Infinity }}
+        className="text-gray-400 text-sm">Загрузка...</motion.div>
     </div>
   );
-}
 
-function DeckCard({ deck }: { deck: DeckWithStats }) {
   return (
-    <Link
-      href={`/decks/${deck.id}`}
-      className="bg-blue-500 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-lg p-6 hover:shadow-2xl transition transform hover:scale-105 block"
-    >
-      <div className="text-white">
-        <div className="flex items-start justify-between mb-3">
-          <h3 className="text-xl font-bold flex-1">{deck.name}</h3>
-          <span className="text-2xl ml-2">→</span>
+    <div className="flex flex-col md:flex-row md:h-screen md:overflow-hidden"
+      style={{ background: '#F7F5F0', fontFamily: "'Sora', 'Inter', sans-serif" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap');`}</style>
+
+      {/* Mobile header */}
+      <MobileHeader onMenu={() => setMenuOpen(true)} />
+
+      {/* Mobile drawer */}
+      <MobileDrawer open={menuOpen} name={displayName} reviewCount={reviewReady}
+        onClose={() => setMenuOpen(false)} onSignOut={handleSignOut} />
+
+      {/* Desktop sidebar */}
+      <Sidebar name={displayName} reviewCount={reviewReady} onSignOut={handleSignOut} />
+
+      {/* Main content */}
+      <main className="flex-1 overflow-y-auto px-4 py-5 md:px-8 md:py-7">
+        <div className="max-w-3xl mx-auto md:mx-0">
+
+          {/* Greeting */}
+          <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
+            className="flex items-center justify-between mb-4">
+            <h1 className="text-lg md:text-xl font-bold text-gray-900">
+              Привет, {displayName} 👋
+            </h1>
+            <Link href="/dashboard" className="text-xs text-gray-400 hover:text-gray-600 transition hidden md:block">
+              ← Обычный дашборд
+            </Link>
+          </motion.div>
+
+          {/* Review block — только на мобиле */}
+          {reviewReady > 0 && (
+            <div className="md:hidden mb-4">
+              <ReviewWidget count={reviewReady} />
+            </div>
+          )}
+
+          {/* Analytics */}
+          <AnalyticsStrip streak={streak} last7={last7} today={today}
+            totalMastered={totalMastered} wordsThisWeek={wordsThisWeek} />
+
+          {/* Decks */}
+          {hasContent ? (
+            <>
+              {myDecks.length > 0 && (
+                <section className="mb-8">
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Мои наборы</h2>
+                    <Link href="/decks" className="text-xs text-[#057A55] font-medium hover:underline">Все →</Link>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+                    {myDecks.slice(0, 9).map((d, i) => <DeckCard key={d.id} deck={d} delay={0.1 + i * 0.05} />)}
+                  </div>
+                  {myDecks.length > 9 && (
+                    <div className="mt-3 text-center">
+                      <Link href="/decks" className="text-xs text-[#057A55] font-medium hover:underline">
+                        Ещё {myDecks.length - 9} наборов →
+                      </Link>
+                    </div>
+                  )}
+                </section>
+              )}
+
+              {groupSections.map((g, gi) => (
+                <section key={g.id} className="mb-8">
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      {g.name}
+                    </h2>
+                    <Link href={`/groups/${g.id}`} className="text-xs text-[#057A55] font-medium hover:underline">Открыть →</Link>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+                    {g.decks.slice(0, 9).map((d, i) => <DeckCard key={d.id} deck={d} delay={0.15 + gi * 0.05 + i * 0.05} />)}
+                  </div>
+                  {g.decks.length > 9 && (
+                    <div className="mt-3 text-center">
+                      <Link href={`/groups/${g.id}`} className="text-xs text-[#057A55] font-medium hover:underline">
+                        Ещё {g.decks.length - 9} наборов →
+                      </Link>
+                    </div>
+                  )}
+                </section>
+              ))}
+            </>
+          ) : (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
+              className="text-center py-16">
+              <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <svg className="w-7 h-7 text-gray-300" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+              </div>
+              <p className="text-sm font-semibold text-gray-600 mb-1">Пока нет наборов</p>
+              <p className="text-xs text-gray-400 mb-5">Создайте первый набор карточек</p>
+              <Link href="/decks/new"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#057A55] text-white text-sm font-semibold rounded-xl hover:bg-[#046b4a] transition">
+                Создать набор
+              </Link>
+            </motion.div>
+          )}
         </div>
-        {deck.description && (
-          <p className="text-blue-100 text-sm mb-4 line-clamp-2">
-            {deck.description}
-          </p>
-        )}
-        <DeckSrsProgress stats={deck.stats} variant="onDark" />
-        {deck.stats.readyForReview > 0 && (
-          <div className="mt-2 inline-block px-2 py-1 bg-yellow-400 text-yellow-900 rounded text-xs font-semibold">
-            🔄 {deck.stats.readyForReview} к повторению
-          </div>
-        )}
-      </div>
-    </Link>
+      </main>
+    </div>
   );
 }

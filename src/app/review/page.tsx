@@ -18,10 +18,8 @@ export default function ReviewLandingPage() {
     if (!profile) return;
     try {
       const { count, error } = await supabase
-        .from('user_cards')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', profile.id)
-        .neq('status', 'new');
+        .from('user_cards').select('*', { count: 'exact', head: true })
+        .eq('user_id', profile.id).neq('status', 'new');
       if (error) throw error;
       setReviewCount(count ?? 0);
     } catch (err) {
@@ -33,45 +31,44 @@ export default function ReviewLandingPage() {
 
   if (!profile || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-xl text-gray-800">Загрузка...</p>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#F7F5F0' }}>
+        <p className="text-gray-500 text-sm">Загрузка...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 py-8 px-4">
-      <div className="max-w-2xl mx-auto">
-        <div className="text-center mb-12">
-          <div className="text-6xl mb-4">🔄</div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Режим повторения</h1>
-          <p className="text-xl text-gray-700">Повтори выученные карточки из всех наборов</p>
+    <div className="min-h-screen py-8 px-4" style={{ background: '#F7F5F0' }}>
+      <div className="max-w-md mx-auto">
+        <div className="text-center mb-8">
+          <div className="w-14 h-14 bg-[#057A55]/10 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">🔄</div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">Режим повторения</h1>
+          <p className="text-gray-500 text-sm">Повтори выученные карточки из всех наборов</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-xl p-8 mb-8 text-center">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 mb-4 text-center">
           {reviewCount > 0 ? (
             <>
-              <div className="text-6xl font-bold text-orange-600 mb-4">{reviewCount}</div>
-              <p className="text-xl text-gray-700 mb-6">изученных карточек</p>
-              <Link
-                href="/review/start"
-                className="inline-block px-8 py-4 bg-orange-500 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-xl font-bold text-xl hover:from-orange-600 hover:to-red-700 transition shadow-lg"
-              >
-                Начать повторение
+              <div className="text-5xl font-black text-gray-900 mb-1">{reviewCount}</div>
+              <p className="text-gray-500 text-sm mb-6">изученных карточек</p>
+              <Link href="/review/start"
+                className="inline-block px-8 py-3 text-white rounded-xl font-semibold text-sm transition shadow-sm"
+                style={{ background: '#057A55' }}>
+                Начать повторение →
               </Link>
             </>
           ) : (
             <>
-              <div className="text-6xl mb-4">😕</div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Нет изученных карточек</h2>
-              <p className="text-gray-700">Сначала изучи карточки в наборах и отметь «Знаю»</p>
+              <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">😕</div>
+              <h2 className="text-lg font-bold text-gray-900 mb-1">Нет изученных карточек</h2>
+              <p className="text-gray-500 text-sm">Сначала изучи карточки в наборах и отметь «Знаю»</p>
             </>
           )}
         </div>
 
-        <div className="bg-purple-50 border border-purple-200 rounded-xl p-6 text-center">
-          <h3 className="font-semibold text-purple-900 mb-3">💡 Как это работает:</h3>
-          <ul className="space-y-2 text-purple-800">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-5">
+          <h3 className="font-semibold text-gray-900 text-sm mb-3">Как это работает</h3>
+          <ul className="space-y-2 text-sm text-gray-500">
             <li>📖 Сначала просмотри карточки и отметь «Знаю»</li>
             <li>🎯 Пройди 3 теста: выбор, аудио, диктант</li>
             <li>🔄 Выученные слова появляются для повторения по расписанию</li>
@@ -79,8 +76,8 @@ export default function ReviewLandingPage() {
           </ul>
         </div>
 
-        <div className="text-center mt-6">
-          <Link href="/dashboard" className="text-gray-600 hover:text-gray-900 font-medium">
+        <div className="text-center">
+          <Link href="/dashboard" className="text-gray-400 hover:text-gray-600 text-sm">
             ← Назад на главную
           </Link>
         </div>
