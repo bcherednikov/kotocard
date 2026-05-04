@@ -138,7 +138,13 @@ async function proxy(request: Request, ctx: RouteCtx) {
 
   const upstream = await fetchUpstream(target, method, hdrs, body, isStreamBody);
 
-  return new Response(upstream.body, {
+  // For storage (binary/large files) stream the body; for everything else buffer it.
+  // Buffering prevents ERR_INCOMPLETE_CHUNKED_ENCODING when Supabase drops the TCP
+  // connection mid-stream — the browser gets a complete response or a clean error.
+  const isStoragePath = segments[0] === 'storage';
+  const responseBody = isStoragePath ? upstream.body : await upstream.arrayBuffer();
+
+  return new Response(responseBody, {
     status: upstream.status,
     statusText: upstream.statusText,
     headers: forwardResponseHeaders(upstream.headers),
