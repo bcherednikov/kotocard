@@ -4,7 +4,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { getPrimaryTestCards, getAllDeckCards, updateUserCard } from '@/lib/srs/queries';
 import { getNextTestType, handlePrimaryTestCorrect, handlePrimaryTestIncorrect } from '@/lib/srs/engine';
 import { generateChoiceQuestion, generateAudioQuestion, generateDictationQuestion } from '@/lib/srs/question-generator';
@@ -16,6 +15,8 @@ import { DictationQuestion } from '@/components/student/test/DictationQuestion';
 import { TestFeedback } from '@/components/student/test/TestFeedback';
 import { trackActivityInBackground } from '@/lib/analytics/tracker';
 import type { DailyActivityIncrements } from '@/lib/analytics/types';
+import { ImmersiveShell } from '@/components/layout/ImmersiveShell';
+import { Badge } from '@/components/ui/badge';
 
 const MAX_QUESTIONS = 30;
 
@@ -48,11 +49,9 @@ export default function PrimaryTestPage() {
         getPrimaryTestCards(supabase, profile.id, deckId),
         getAllDeckCards(supabase, deckId),
       ]);
-
       const limited = cards.slice(0, MAX_QUESTIONS);
       setTestCards(limited);
       setAllDeckCards(deckCards);
-
       if (limited.length > 0) {
         prepareQuestion(limited[0], deckCards);
         trackActivityInBackground(supabase, profile.id, { study_sessions: 1 });
@@ -67,10 +66,8 @@ export default function PrimaryTestPage() {
   function prepareQuestion(card: UserCardWithCard, deckCards: CardData[]) {
     const testType = getNextTestType(card);
     if (!testType) return;
-
     setCurrentTestType(testType);
     const cardData = card.cards;
-
     let question: SrsQuestion;
     switch (testType) {
       case 'choice': question = generateChoiceQuestion(cardData, deckCards); break;
@@ -93,8 +90,6 @@ export default function PrimaryTestPage() {
 
     try {
       await updateUserCard(supabase, card.user_card_id, updates);
-
-      // Track activity
       const increments: Partial<DailyActivityIncrements> = {};
       if (isCorrect) {
         increments.tests_passed = 1;
@@ -119,7 +114,6 @@ export default function PrimaryTestPage() {
   function handleNext() {
     if (isProcessing) return;
     setIsProcessing(true);
-
     if (currentIndex < testCards.length - 1) {
       const nextIdx = currentIndex + 1;
       setCurrentIndex(nextIdx);
@@ -140,50 +134,49 @@ export default function PrimaryTestPage() {
     }
   }
 
+  const progress = testCards.length > 0 ? Math.round(((currentIndex + 1) / testCards.length) * 100) : 0;
+
+  const testTypeLabel =
+    currentTestType === 'choice' ? '📝 Выбор варианта' :
+    currentTestType === 'audio' ? '🎧 Аудио тест' :
+    currentTestType === 'dictation' ? '✍️ Диктант' : 'Тест';
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-xl text-gray-800">Готовим тест...</p>
-      </div>
+      <ImmersiveShell backHref={`/decks/${deckId}`} title="Тестирование">
+        <div className="flex items-center justify-center h-full">
+          <p className="text-gray-500 text-sm">Готовим тест...</p>
+        </div>
+      </ImmersiveShell>
     );
   }
 
   if (testCards.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="text-center">
-          <div className="text-6xl mb-4">📝</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Нет карточек для тестирования</h1>
-          <p className="text-gray-700 mb-6">Сначала просмотри карточки и отметь «Знаю»</p>
-          <Link href={`/decks/${deckId}`} className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition">
-            ← Назад к набору
-          </Link>
+      <ImmersiveShell backHref={`/decks/${deckId}`} title="Тестирование">
+        <div className="flex items-center justify-center h-full px-4">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">📝</div>
+            <h1 className="text-xl font-bold text-gray-900 mb-2">Нет карточек для тестирования</h1>
+            <p className="text-gray-500 text-sm">Сначала просмотри карточки и отметь «Знаю»</p>
+          </div>
         </div>
-      </div>
+      </ImmersiveShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-100 to-orange-100 py-8 px-4">
-      <div className="max-w-3xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <Link href={`/decks/${deckId}`} className="px-4 py-2 bg-white rounded-lg shadow text-gray-700 hover:bg-gray-50 font-medium">← Выход</Link>
-          <div className="text-lg font-semibold text-gray-800">{currentIndex + 1} из {testCards.length}</div>
-          <div className="px-4 py-2 bg-white rounded-lg shadow">
-            <span className="text-green-600 font-semibold">✓ {stats.correct}</span>{' / '}
-            <span className="text-red-600 font-semibold">✗ {stats.incorrect}</span>
-          </div>
-        </div>
-
-        <div className="w-full h-2 bg-white/50 rounded-full mb-8 overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-purple-500 to-pink-600 transition-all duration-300" style={{ width: `${((currentIndex + 1) / testCards.length) * 100}%` }} />
-        </div>
-
+    <ImmersiveShell
+      backHref={`/decks/${deckId}`}
+      title={`${currentIndex + 1} / ${testCards.length}`}
+      progress={progress}
+      leftBadge={<Badge variant="green">✓ {stats.correct}</Badge>}
+      rightBadge={<Badge variant="red">✗ {stats.incorrect}</Badge>}
+    >
+      <div className="py-6 px-4 max-w-3xl mx-auto">
         <div className="text-center mb-4">
-          <span className="inline-block px-3 py-1 bg-white rounded-full text-sm font-medium text-gray-700 shadow">
-            {currentTestType === 'choice' && '📝 Выбор варианта'}
-            {currentTestType === 'audio' && '🎧 Аудио тест'}
-            {currentTestType === 'dictation' && '✍️ Диктант'}
+          <span className="inline-block px-3 py-1 bg-white border border-gray-200 rounded-full text-xs font-medium text-gray-600 shadow-sm">
+            {testTypeLabel}
           </span>
         </div>
 
@@ -206,6 +199,6 @@ export default function PrimaryTestPage() {
           />
         )}
       </div>
-    </div>
+    </ImmersiveShell>
   );
 }

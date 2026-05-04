@@ -30,7 +30,6 @@ export default function JoinGroupPage() {
 
       if (!res.ok) {
         if (data.group_id) {
-          // Уже в группе — просто перенаправить
           router.push(`/groups/${data.group_id}`);
           return;
         }
@@ -47,16 +46,18 @@ export default function JoinGroupPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
-          <div className="text-6xl mb-4">👥</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Приглашение в группу</h1>
-          <p className="text-gray-700 mb-6">Войдите или зарегистрируйтесь, чтобы вступить в группу</p>
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: '#F7F5F0' }}>
+        <div className="max-w-md w-full bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
+          <div className="w-14 h-14 bg-[#057A55]/10 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">👥</div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Приглашение в группу</h1>
+          <p className="text-gray-500 text-sm mb-6">Войдите или зарегистрируйтесь, чтобы вступить в группу</p>
           <div className="flex gap-3">
-            <Link href="/login" className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition text-center">
+            <Link href="/login"
+              className="flex-1 py-3 bg-[#057A55] text-white rounded-xl font-semibold text-sm hover:bg-[#065f46] transition text-center">
               Войти
             </Link>
-            <Link href="/register" className="flex-1 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition text-center">
+            <Link href="/register"
+              className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl font-semibold text-sm hover:bg-gray-50 transition text-center">
               Регистрация
             </Link>
           </div>
@@ -67,17 +68,16 @@ export default function JoinGroupPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: '#F7F5F0' }}>
+        <div className="max-w-md w-full bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
           <div className="text-6xl mb-4">🎉</div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Вы в группе!</h1>
-          <p className="text-gray-700 mb-6">
-            Вы вступили в группу <strong>{success.group_name}</strong>
+          <p className="text-gray-500 text-sm mb-6">
+            Вы вступили в группу <span className="font-semibold text-gray-900">{success.group_name}</span>
           </p>
           <Link
             href={`/groups/${success.group_id}`}
-            className="inline-block px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition"
-          >
+            className="inline-block px-6 py-3 bg-[#057A55] text-white rounded-xl font-semibold text-sm hover:bg-[#065f46] transition">
             Перейти к группе
           </Link>
         </div>
@@ -86,30 +86,30 @@ export default function JoinGroupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
-        <div className="text-6xl mb-4">👥</div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">Приглашение в группу</h1>
-        <p className="text-gray-700 mb-6">
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: '#F7F5F0' }}>
+      <div className="max-w-md w-full bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
+        <div className="w-14 h-14 bg-[#057A55]/10 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">👥</div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Приглашение в группу</h1>
+        <p className="text-gray-500 text-sm mb-6">
           Вы приглашены в группу. Нажмите кнопку, чтобы вступить.
         </p>
 
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
-            <p className="text-sm text-red-800">{error}</p>
+          <div className="p-3 bg-red-50 border border-red-100 rounded-xl mb-4">
+            <p className="text-sm text-red-700">{error}</p>
           </div>
         )}
 
         <button
           onClick={handleJoin}
           disabled={joining}
-          className="w-full py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition disabled:opacity-50"
+          className="w-full py-3 bg-[#057A55] text-white rounded-xl font-semibold text-sm hover:bg-[#065f46] disabled:opacity-50 transition active:scale-95"
         >
           {joining ? 'Вступаем...' : 'Вступить в группу'}
         </button>
 
         <div className="mt-4">
-          <Link href="/groups" className="text-gray-500 hover:text-gray-700 text-sm">
+          <Link href="/groups" className="text-gray-400 hover:text-gray-600 text-sm">
             Назад к моим группам
           </Link>
         </div>

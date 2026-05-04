@@ -5,6 +5,13 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { PageHeader } from '@/components/ui/page-header';
+import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { PageSkeleton } from '@/components/ui/loading-skeleton';
 
 type Group = {
   id: string;
@@ -36,17 +43,14 @@ export default function GroupSettingsPage() {
   const [myRole, setMyRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Редактирование группы
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editPermission, setEditPermission] = useState('admin_only');
   const [saving, setSaving] = useState(false);
 
-  // Инвайты
   const [invites, setInvites] = useState<any[]>([]);
   const [creatingInvite, setCreatingInvite] = useState(false);
 
-  // Добавление колод
   const [userDecks, setUserDecks] = useState<UserDeck[]>([]);
   const [showAddDeck, setShowAddDeck] = useState(false);
   const [addingDeck, setAddingDeck] = useState<string | null>(null);
@@ -58,7 +62,6 @@ export default function GroupSettingsPage() {
   async function loadAll() {
     if (!profile) return;
     try {
-      // Группа
       const { data: g } = await supabase
         .from('groups')
         .select('*')
@@ -70,7 +73,6 @@ export default function GroupSettingsPage() {
       setEditDescription(g.description || '');
       setEditPermission(g.deck_add_permission);
 
-      // Участники
       const { data: mems } = await supabase
         .from('group_members')
         .select('id, user_id, role, profiles(display_name)')
@@ -93,7 +95,6 @@ export default function GroupSettingsPage() {
         return;
       }
 
-      // Инвайты
       const { data: inv } = await supabase
         .from('group_invites')
         .select('*')
@@ -101,7 +102,6 @@ export default function GroupSettingsPage() {
         .order('created_at', { ascending: false });
       setInvites(inv || []);
 
-      // Колоды пользователя для добавления
       await loadUserDecks();
     } catch (err) {
       console.error('Error loading settings:', err);
@@ -252,8 +252,8 @@ export default function GroupSettingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-xl text-gray-800">Загрузка...</p>
+      <div className="px-4 py-6 max-w-3xl mx-auto">
+        <PageSkeleton rows={4} />
       </div>
     );
   }
@@ -261,202 +261,217 @@ export default function GroupSettingsPage() {
   if (!group || myRole !== 'admin') return null;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-3xl mx-auto">
-        <div className="mb-6">
-          <Link href={`/groups/${groupId}`} className="text-blue-600 hover:text-blue-800 font-medium">
-            ← К группе
-          </Link>
-        </div>
+    <div className="px-4 py-6 max-w-3xl mx-auto">
+      <PageHeader title="Настройки группы" back={`/groups/${groupId}`} />
 
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Настройки группы</h1>
-
-        {/* Основные настройки */}
-        <form onSubmit={handleSaveGroup} className="bg-white rounded-xl shadow-lg p-6 mb-8">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Основное</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">Название</label>
-              <input
-                type="text"
+      <div className="space-y-4">
+        {/* Basic settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Основное</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSaveGroup} className="space-y-4">
+              <Input
+                label="Название"
                 value={editName}
                 onChange={e => setEditName(e.target.value)}
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg text-gray-900"
                 required
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">Описание</label>
-              <textarea
+              <Textarea
+                label="Описание"
                 value={editDescription}
                 onChange={e => setEditDescription(e.target.value)}
                 rows={2}
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg text-gray-900"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">Добавление наборов</label>
-              <select
-                value={editPermission}
-                onChange={e => setEditPermission(e.target.value)}
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg text-gray-900"
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Добавление наборов</label>
+                <select
+                  value={editPermission}
+                  onChange={e => setEditPermission(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:ring-2 focus:ring-[#057A55]/20 focus:border-[#057A55] outline-none transition hover:border-gray-300"
+                >
+                  <option value="admin_only">Только админы</option>
+                  <option value="all_members">Все участники</option>
+                </select>
+              </div>
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                loading={saving}
+                className="w-full sm:w-auto"
               >
-                <option value="admin_only">Только админы</option>
-                <option value="all_members">Все участники</option>
-              </select>
+                Сохранить
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Decks section */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Наборы в группе</CardTitle>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setShowAddDeck(!showAddDeck)}
+              >
+                {showAddDeck ? 'Скрыть' : '+ Добавить набор'}
+              </Button>
             </div>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50"
-            >
-              {saving ? 'Сохраняем...' : 'Сохранить'}
-            </button>
-          </div>
-        </form>
+          </CardHeader>
+          <CardContent>
+            {showAddDeck && (
+              <div className="mb-2 p-4 bg-gray-50 rounded-xl">
+                <p className="text-xs text-gray-500 mb-3">Выберите набор для добавления в группу:</p>
+                {userDecks.length === 0 ? (
+                  <p className="text-gray-500 text-sm">
+                    У вас нет наборов.{' '}
+                    <Link href="/decks/new" className="text-[#057A55] hover:text-[#065f46]">Создать</Link>
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {userDecks.map(deck => (
+                      <div key={deck.id} className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-gray-100">
+                        <span className="text-gray-900 text-sm font-medium">{deck.name}</span>
+                        {deck.already_in_group ? (
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => handleRemoveDeck(deck.id)}
+                          >
+                            Убрать
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            loading={addingDeck === deck.id}
+                            onClick={() => handleAddDeck(deck.id)}
+                          >
+                            Добавить
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-        {/* Наборы в группе */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold text-gray-900">Наборы в группе</h2>
-            <button
-              onClick={() => setShowAddDeck(!showAddDeck)}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition"
-            >
-              {showAddDeck ? 'Скрыть' : '+ Добавить набор'}
-            </button>
-          </div>
-
-          {showAddDeck && (
-            <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-600 mb-3">Выберите набор для добавления в группу:</p>
-              {userDecks.length === 0 ? (
-                <p className="text-gray-500 text-sm">У вас нет наборов. <Link href="/decks/new" className="text-blue-600">Создать</Link></p>
-              ) : (
-                <div className="space-y-2">
-                  {userDecks.map(deck => (
-                    <div key={deck.id} className="flex items-center justify-between p-2 bg-white rounded border">
-                      <span className="text-gray-900 font-medium">{deck.name}</span>
-                      {deck.already_in_group ? (
-                        <button
-                          onClick={() => handleRemoveDeck(deck.id)}
-                          className="px-3 py-1 text-red-600 text-sm font-medium hover:bg-red-50 rounded transition"
-                        >
-                          Убрать
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleAddDeck(deck.id)}
-                          disabled={addingDeck === deck.id}
-                          className="px-3 py-1 bg-green-100 text-green-700 text-sm font-medium rounded hover:bg-green-200 transition disabled:opacity-50"
-                        >
-                          {addingDeck === deck.id ? '...' : 'Добавить'}
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Участники */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Участники</h2>
-          <div className="divide-y">
+        {/* Members section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Участники</CardTitle>
+          </CardHeader>
+          <CardContent className="divide-y divide-gray-50">
             {members.map(member => (
-              <div key={member.id} className="py-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-purple-400 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+              <div key={member.id} className="py-3 flex items-center justify-between first:pt-0 gap-2">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 bg-[#057A55]/10 rounded-xl flex items-center justify-center text-[#057A55] text-sm font-bold shrink-0">
                     {member.display_name[0]?.toUpperCase()}
                   </div>
-                  <span className="font-medium text-gray-900">
-                    {member.display_name}
-                    {member.user_id === profile?.id && ' (вы)'}
-                  </span>
+                  <div className="min-w-0">
+                    <span className="font-medium text-gray-900 text-sm truncate block">
+                      {member.display_name}
+                      {member.user_id === profile?.id && <span className="text-gray-400 text-xs ml-1">(вы)</span>}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                    member.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'
-                  }`}>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Badge variant={member.role === 'admin' ? 'green' : 'gray'}>
                     {member.role === 'admin' ? 'Админ' : 'Участник'}
-                  </span>
+                  </Badge>
                   {member.user_id !== profile?.id && (
                     <>
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleToggleRole(member.id, member.role)}
-                        className="text-xs text-blue-600 hover:text-blue-800"
                       >
-                        {member.role === 'admin' ? 'Понизить' : 'Назначить админом'}
-                      </button>
-                      <button
+                        {member.role === 'admin' ? 'Понизить' : 'Сделать админом'}
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
                         onClick={() => handleRemoveMember(member.id, member.display_name)}
-                        className="text-xs text-red-600 hover:text-red-800"
                       >
                         Удалить
-                      </button>
+                      </Button>
                     </>
                   )}
                 </div>
               </div>
             ))}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* Инвайты */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold text-gray-900">Приглашения</h2>
-            <button
-              onClick={handleCreateInvite}
-              disabled={creatingInvite}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition disabled:opacity-50"
-            >
-              {creatingInvite ? '...' : '+ Создать ссылку'}
-            </button>
-          </div>
-
-          {invites.length === 0 ? (
-            <p className="text-gray-500 text-sm">Нет приглашений. Создайте ссылку для приглашения участников.</p>
-          ) : (
-            <div className="space-y-3">
-              {invites.map(invite => (
-                <div key={invite.id} className={`p-3 rounded-lg border ${invite.is_active ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100'}`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <code className="text-sm bg-gray-100 px-2 py-1 rounded truncate block">
+        {/* Invites section */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Приглашения</CardTitle>
+              <Button
+                variant="primary"
+                size="sm"
+                loading={creatingInvite}
+                onClick={handleCreateInvite}
+              >
+                + Создать ссылку
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {invites.length === 0 ? (
+              <p className="text-gray-400 text-sm">Нет приглашений. Создайте ссылку для приглашения участников.</p>
+            ) : (
+              <div className="space-y-3">
+                {invites.map(invite => (
+                  <div
+                    key={invite.id}
+                    className={`p-3 rounded-xl border ${invite.is_active ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100'}`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <code className="text-xs bg-gray-100 px-2 py-1 rounded-lg block truncate text-gray-700">
                           {getInviteUrl(invite.invite_code)}
                         </code>
+                        <div className="text-xs text-gray-400 mt-1 flex items-center gap-2 flex-wrap">
+                          <span>Использований: {invite.use_count}{invite.max_uses ? `/${invite.max_uses}` : ''}</span>
+                          {!invite.is_active && <Badge variant="red">Деактивировано</Badge>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
                         {invite.is_active && (
-                          <button
-                            onClick={() => navigator.clipboard.writeText(getInviteUrl(invite.invite_code))}
-                            className="text-xs text-blue-600 hover:text-blue-800 whitespace-nowrap"
-                          >
-                            Копировать
-                          </button>
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => navigator.clipboard.writeText(getInviteUrl(invite.invite_code))}
+                            >
+                              Копировать
+                            </Button>
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              onClick={() => handleDeactivateInvite(invite.id)}
+                            >
+                              Деактивировать
+                            </Button>
+                          </>
                         )}
                       </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        Использований: {invite.use_count}{invite.max_uses ? `/${invite.max_uses}` : ''}
-                        {!invite.is_active && <span className="text-red-500 ml-2">Деактивировано</span>}
-                      </div>
                     </div>
-                    {invite.is_active && (
-                      <button
-                        onClick={() => handleDeactivateInvite(invite.id)}
-                        className="text-xs text-red-600 hover:text-red-800 ml-3"
-                      >
-                        Деактивировать
-                      </button>
-                    )}
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { RequireAuth } from '@/components/auth/RequireAuth';
-import { ReactNode } from 'react';
+import { ProtectedAppShell } from "@/components/layout/ProtectedAppShell";
+import { type ReactNode } from "react";
 
 export default function GroupsLayout({ children }: { children: ReactNode }) {
-  return <RequireAuth>{children}</RequireAuth>;
+  return <ProtectedAppShell>{children}</ProtectedAppShell>;
 }

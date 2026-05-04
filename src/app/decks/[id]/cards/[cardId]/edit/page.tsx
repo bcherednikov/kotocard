@@ -19,9 +19,7 @@ export default function EditCardPage() {
   const deckId = params.id as string;
   const cardId = params.cardId as string;
 
-  useEffect(() => {
-    loadCard();
-  }, [cardId]);
+  useEffect(() => { loadCard(); }, [cardId]);
 
   async function loadCard() {
     try {
@@ -42,19 +40,11 @@ export default function EditCardPage() {
     e.preventDefault();
     setError('');
     setSaving(true);
-
     try {
       const { error: updateError } = await supabase
         .from('cards')
-        .update({
-          ru_text: ruText,
-          en_text: enText,
-          ru_transcription: ruTranscription || null,
-          audio_url: audioUrl || null,
-          updated_at: new Date().toISOString(),
-        })
+        .update({ ru_text: ruText, en_text: enText, ru_transcription: ruTranscription || null, audio_url: audioUrl || null, updated_at: new Date().toISOString() })
         .eq('id', cardId);
-
       if (updateError) throw updateError;
       router.push(`/decks/${deckId}`);
     } catch (err: any) {
@@ -66,74 +56,75 @@ export default function EditCardPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-16 text-center">
-        <p className="text-xl text-gray-800">Загрузка...</p>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#F7F5F0' }}>
+        <p className="text-gray-500 text-sm">Загрузка...</p>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen" style={{ background: '#F7F5F0' }}>
+      <div className="max-w-2xl mx-auto px-4 py-8">
         <div className="mb-6">
-          <Link href={`/decks/${deckId}`} className="text-blue-600 hover:text-blue-800 font-medium">
-            ← Назад к набору
+          <Link href={`/decks/${deckId}`} className="inline-flex items-center gap-1.5 text-[#057A55] hover:text-[#065f46] font-medium text-sm transition">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+            Назад к набору
           </Link>
         </div>
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Редактировать карточку</h1>
-          <p className="text-gray-700">Измените текст на русском или английском</p>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Редактировать карточку</h1>
+          <p className="text-gray-500 text-sm mt-0.5">Измените текст на русском или английском</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-lg p-8">
-          <div className="space-y-6">
-            <div>
-              <label htmlFor="ruText" className="block text-sm font-medium text-gray-900 mb-2">🇷🇺 Текст на русском *</label>
-              <input id="ruText" type="text" value={ruText} onChange={(e) => setRuText(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-gray-900"
-                required disabled={saving} />
-            </div>
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
+          <div>
+            <label htmlFor="ruText" className="block text-sm font-medium text-gray-700 mb-1.5">🇷🇺 Текст на русском *</label>
+            <input id="ruText" type="text" value={ruText} onChange={(e) => setRuText(e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#057A55] focus:border-[#057A55] outline-none transition text-gray-900 text-sm"
+              required disabled={saving} />
+          </div>
 
-            <div>
-              <label htmlFor="enText" className="block text-sm font-medium text-gray-900 mb-2">🇬🇧 Текст на английском *</label>
-              <input id="enText" type="text" value={enText} onChange={(e) => setEnText(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-gray-900"
-                required disabled={saving} />
-            </div>
+          <div>
+            <label htmlFor="enText" className="block text-sm font-medium text-gray-700 mb-1.5">🇬🇧 Текст на английском *</label>
+            <input id="enText" type="text" value={enText} onChange={(e) => setEnText(e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#057A55] focus:border-[#057A55] outline-none transition text-gray-900 text-sm"
+              required disabled={saving} />
+          </div>
 
-            <div>
-              <label htmlFor="ruTranscription" className="block text-sm font-medium text-gray-900 mb-2">📖 Русская транскрипция (необязательно)</label>
-              <input id="ruTranscription" type="text" value={ruTranscription} onChange={(e) => setRuTranscription(e.target.value)}
-                placeholder="Например: эпл"
-                className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-gray-900 placeholder:text-gray-500"
-                disabled={saving} />
-            </div>
+          <div>
+            <label htmlFor="ruTranscription" className="block text-sm font-medium text-gray-700 mb-1.5">📖 Транскрипция (необязательно)</label>
+            <input id="ruTranscription" type="text" value={ruTranscription} onChange={(e) => setRuTranscription(e.target.value)}
+              placeholder="Например: эпл"
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#057A55] focus:border-[#057A55] outline-none transition text-gray-900 placeholder:text-gray-400 text-sm"
+              disabled={saving} />
+          </div>
 
-            <div>
-              <label htmlFor="audioUrl" className="block text-sm font-medium text-gray-900 mb-2">🔊 Ссылка на аудио (необязательно)</label>
-              <input id="audioUrl" type="url" value={audioUrl} onChange={(e) => setAudioUrl(e.target.value)}
-                placeholder="https://example.com/audio.mp3"
-                className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-gray-900 placeholder:text-gray-500"
-                disabled={saving} />
-            </div>
+          <div>
+            <label htmlFor="audioUrl" className="block text-sm font-medium text-gray-700 mb-1.5">🔊 Ссылка на аудио (необязательно)</label>
+            <input id="audioUrl" type="url" value={audioUrl} onChange={(e) => setAudioUrl(e.target.value)}
+              placeholder="https://example.com/audio.mp3"
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#057A55] focus:border-[#057A55] outline-none transition text-gray-900 placeholder:text-gray-400 text-sm"
+              disabled={saving} />
+          </div>
 
-            {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-800">{error}</p>
-              </div>
-            )}
-
-            <div className="flex gap-4">
-              <Link href={`/decks/${deckId}`}
-                className="px-6 py-3 border-2 border-gray-400 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition">
-                Отмена
-              </Link>
-              <button type="submit" disabled={saving}
-                className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
-                {saving ? 'Сохраняем...' : 'Сохранить изменения'}
-              </button>
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-100 rounded-xl">
+              <p className="text-sm text-red-700">{error}</p>
             </div>
+          )}
+
+          <div className="flex gap-3 pt-1">
+            <Link href={`/decks/${deckId}`}
+              className="px-5 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition">
+              Отмена
+            </Link>
+            <button type="submit" disabled={saving}
+              className="flex-1 py-2.5 bg-[#057A55] text-white rounded-xl text-sm font-semibold hover:bg-[#065f46] transition disabled:opacity-50 disabled:cursor-not-allowed">
+              {saving ? 'Сохраняем...' : 'Сохранить изменения'}
+            </button>
           </div>
         </form>
       </div>

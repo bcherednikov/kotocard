@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -80,83 +82,69 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl p-8">
+    <div className="bg-white rounded-2xl shadow-sm p-8">
       <div className="text-center mb-8">
-        <div className="text-5xl mb-4">📚</div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Регистрация</h1>
-        <p className="text-gray-800">Создайте аккаунт для обучения</p>
+        <div className="w-12 h-12 rounded-xl bg-[#057A55] flex items-center justify-center mx-auto mb-4">
+          <span className="text-white text-xl font-black">К</span>
+        </div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-1">Регистрация</h1>
+        <p className="text-gray-500 text-sm">Создайте аккаунт для обучения</p>
       </div>
 
-      <form onSubmit={handleRegister} className="space-y-6">
-        <div>
-          <label htmlFor="displayName" className="block text-sm font-medium text-gray-900 mb-2">
-            Ваше имя
-          </label>
-          <input
-            id="displayName"
-            type="text"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-gray-900 placeholder:text-gray-500"
-            placeholder="Как вас зовут"
-            required
-            disabled={loading}
-          />
-        </div>
+      <form onSubmit={handleRegister} className="space-y-4">
+        <Input
+          label="Ваше имя"
+          type="text"
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          placeholder="Как вас зовут"
+          required
+          disabled={loading}
+        />
 
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-900 mb-2">
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-gray-900 placeholder:text-gray-500"
-            placeholder="you@example.com"
-            required
-            disabled={loading}
-          />
-        </div>
+        <Input
+          label="Email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@example.com"
+          required
+          disabled={loading}
+        />
 
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-900 mb-2">
-            Пароль
-          </label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-gray-900 placeholder:text-gray-500"
-            placeholder="Минимум 6 символов"
-            required
-            disabled={loading}
-            minLength={6}
-          />
-          <p className="mt-1 text-xs text-gray-700">Минимум 6 символов</p>
-        </div>
+        <Input
+          label="Пароль"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Минимум 6 символов"
+          helper="Минимум 6 символов"
+          required
+          disabled={loading}
+          minLength={6}
+        />
 
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
             <p className="text-sm text-red-800">{error}</p>
           </div>
         )}
 
-        <button
+        <Button
           type="submit"
+          variant="primary"
+          fullWidth
+          loading={loading || waitingForAuth}
           disabled={loading || waitingForAuth}
-          className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading || waitingForAuth ? 'Создаём аккаунт...' : 'Создать аккаунт'}
-        </button>
+        </Button>
       </form>
 
       <div className="mt-6 text-center">
-        <p className="text-gray-800">
+        <p className="text-gray-500 text-sm">
           Уже есть аккаунт?{' '}
-          <Link href="/login" className="text-blue-600 font-semibold hover:text-blue-700">
+          <Link href="/login" className="text-[#057A55] font-semibold hover:underline">
             Войти
           </Link>
         </p>

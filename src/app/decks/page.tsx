@@ -96,7 +96,7 @@ export default function DecksPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+        <div data-testid="my-decks" className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Мои наборы</h1>
             <p className="text-gray-700 mt-1">
@@ -128,10 +128,11 @@ export default function DecksPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div data-testid="decks-list" className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {decks.map((deck) => (
               <div
                 key={deck.id}
+                data-testid="deck-card"
                 className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition flex flex-col"
               >
                 <Link href={`/decks/${deck.id}`} className="flex-1 block">

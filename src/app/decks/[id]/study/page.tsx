@@ -4,11 +4,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { updateUserCard } from '@/lib/srs/queries';
 import { handleMarkKnow, handleMarkDontKnow } from '@/lib/srs/engine';
 import type { UserCardWithCard } from '@/lib/srs/types';
 import { trackActivityInBackground } from '@/lib/analytics/tracker';
+import { ImmersiveShell } from '@/components/layout/ImmersiveShell';
+import { Badge } from '@/components/ui/badge';
 
 export default function StudyPage() {
   const params = useParams();
@@ -31,7 +32,6 @@ export default function StudyPage() {
   async function loadCards() {
     if (!profile) return;
     try {
-      // Fetch card IDs and existing user_cards in parallel to avoid sequential round-trips
       const [cardIdsRes, userCardsRes] = await Promise.all([
         supabase.from('cards').select('id').eq('deck_id', deckId),
         supabase.from('user_cards').select('*, cards(*)')
@@ -42,7 +42,6 @@ export default function StudyPage() {
       const allCardIds = (cardIdsRes.data ?? []).map((c) => c.id);
       let userCards = (userCardsRes.data ?? []) as UserCardWithCard[];
 
-      // Insert missing user_cards if needed (first visit to this deck)
       const existingIds = new Set(userCards.map((uc) => uc.card_id));
       const missingIds = allCardIds.filter((id) => !existingIds.has(id));
       if (missingIds.length > 0) {
@@ -107,27 +106,37 @@ export default function StudyPage() {
     }
   }
 
+  const progress = cards.length > 0 ? Math.round(((currentIndex + 1) / cards.length) * 100) : 0;
+
+  const leftBadge = cards.length > 0 ? (
+    <Badge variant="green">✓ {sessionStats.know}</Badge>
+  ) : undefined;
+
+  const rightBadge = cards.length > 0 ? (
+    <Badge variant="red">✗ {sessionStats.dontKnow}</Badge>
+  ) : undefined;
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#F7F5F0' }}>
-        <p className="text-gray-500 text-sm">Загрузка карточек...</p>
-      </div>
+      <ImmersiveShell backHref={`/decks/${deckId}`} title="Изучение">
+        <div className="flex items-center justify-center h-full">
+          <p className="text-gray-500 text-sm">Загрузка карточек...</p>
+        </div>
+      </ImmersiveShell>
     );
   }
 
   if (cards.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: '#F7F5F0' }}>
-        <div className="text-center">
-          <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">😕</div>
-          <h1 className="text-xl font-bold text-gray-900 mb-2">Нет карточек</h1>
-          <p className="text-gray-500 text-sm mb-6">В этом наборе пока нет карточек</p>
-          <Link href={`/decks/${deckId}`}
-            className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-[#057A55] text-white rounded-xl text-sm font-semibold hover:bg-[#065f46] transition">
-            ← Назад к набору
-          </Link>
+      <ImmersiveShell backHref={`/decks/${deckId}`} title="Изучение">
+        <div className="flex items-center justify-center h-full px-4">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">😕</div>
+            <h1 className="text-xl font-bold text-gray-900 mb-2">Нет карточек</h1>
+            <p className="text-gray-500 text-sm">В этом наборе пока нет карточек</p>
+          </div>
         </div>
-      </div>
+      </ImmersiveShell>
     );
   }
 
@@ -137,39 +146,18 @@ export default function StudyPage() {
   const backText = cardData.en_text;
 
   return (
-    <div className="min-h-screen py-8 px-4" style={{ background: '#F7F5F0' }}>
-      <div className="max-w-2xl mx-auto">
-
-        {/* Top bar */}
-        <div className="flex justify-between items-center mb-5">
-          <Link href={`/decks/${deckId}`}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition shadow-sm">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-            Выход
-          </Link>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-500">{currentIndex + 1} / {cards.length}</span>
-            <div className="flex gap-1.5">
-              <span className="px-2.5 py-1 bg-[#057A55]/10 text-[#057A55] rounded-full text-xs font-semibold">✓ {sessionStats.know}</span>
-              <span className="px-2.5 py-1 bg-red-50 text-red-500 rounded-full text-xs font-semibold">✗ {sessionStats.dontKnow}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Progress bar */}
-        <div className="w-full h-1.5 bg-white rounded-full mb-7 overflow-hidden shadow-sm border border-gray-100">
-          <div
-            className="h-full rounded-full transition-all duration-300"
-            style={{ width: `${((currentIndex + 1) / cards.length) * 100}%`, background: '#057A55' }}
-          />
-        </div>
-
+    <ImmersiveShell
+      backHref={`/decks/${deckId}`}
+      title={`${currentIndex + 1} / ${cards.length}`}
+      progress={progress}
+      leftBadge={leftBadge}
+      rightBadge={rightBadge}
+    >
+      <div className="py-6 px-4 max-w-2xl mx-auto">
         {/* Flashcard */}
         <div
           className={`relative mb-6 ${!isFlipped ? 'cursor-pointer' : ''} transition-opacity duration-200`}
-          style={{ perspective: '1000px', height: '380px', opacity: isTransitioning ? 0 : 1 }}
+          style={{ perspective: '1000px', height: '340px', opacity: isTransitioning ? 0 : 1 }}
           onClick={!isFlipped ? () => setIsFlipped(true) : undefined}
         >
           <div className="relative w-full h-full transition-transform duration-500"
@@ -177,26 +165,26 @@ export default function StudyPage() {
 
             {/* Front */}
             <div className="absolute w-full h-full" style={{ backfaceVisibility: 'hidden' }}>
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 h-full flex flex-col justify-center">
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 h-full flex flex-col justify-center">
                 <div className="text-center">
                   <div className="text-5xl mb-5">🇷🇺</div>
-                  <p className="text-5xl font-bold text-gray-900 mb-2">{frontText}</p>
+                  <p className="text-4xl font-bold text-gray-900 mb-2">{frontText}</p>
                   {cardData.ru_transcription && (
-                    <p className="text-lg text-[#057A55] mb-6 italic">[{cardData.ru_transcription}]</p>
+                    <p className="text-lg text-[#057A55] mb-4 italic">[{cardData.ru_transcription}]</p>
                   )}
-                  <p className="text-gray-400 text-sm mt-7">Нажми чтобы увидеть ответ</p>
+                  <p className="text-gray-400 text-sm mt-6">Нажми чтобы увидеть ответ</p>
                 </div>
               </div>
             </div>
 
             {/* Back */}
             <div className="absolute w-full h-full" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
-              <div className="rounded-2xl shadow-sm p-12 h-full flex flex-col justify-center"
+              <div className="rounded-2xl shadow-sm p-10 h-full flex flex-col justify-center"
                 style={{ background: 'linear-gradient(135deg, #057A55 0%, #065f46 100%)' }}>
                 <div className="text-center text-white">
                   <div className="text-5xl mb-5">🇬🇧</div>
                   <div className="flex items-center justify-center gap-4 mb-2">
-                    <p className="text-5xl font-bold">{backText}</p>
+                    <p className="text-4xl font-bold">{backText}</p>
                     <button
                       onClick={(e) => { e.stopPropagation(); speakText(cards[currentIndex].cards.en_text, 'en'); }}
                       className="text-3xl hover:scale-110 transition-transform active:scale-95 opacity-70 hover:opacity-100"
@@ -205,7 +193,7 @@ export default function StudyPage() {
                       🔊
                     </button>
                   </div>
-                  <div className="mt-7 pt-5 border-t border-white/20">
+                  <div className="mt-6 pt-4 border-t border-white/20">
                     <p className="text-xs text-white/50 mb-1.5 uppercase tracking-wide">Перевод</p>
                     <p className="text-xl text-white/80 font-medium">🇷🇺 {frontText}</p>
                   </div>
@@ -242,6 +230,6 @@ export default function StudyPage() {
           </div>
         )}
       </div>
-    </div>
+    </ImmersiveShell>
   );
 }

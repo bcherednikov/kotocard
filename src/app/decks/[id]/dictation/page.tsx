@@ -4,10 +4,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { getAllDeckCards } from '@/lib/srs/queries';
 import type { CardData } from '@/lib/srs/types';
 import { trackActivityInBackground } from '@/lib/analytics/tracker';
+import { ImmersiveShell } from '@/components/layout/ImmersiveShell';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 const TOTAL_HINTS = 20;
 const HINTS_PER_USE = 2;
@@ -45,7 +47,6 @@ export default function DictationPrepPage() {
     try {
       const cards = await getAllDeckCards(supabase, deckId);
       if (cards.length === 0) { setTasks([]); setLoading(false); return; }
-
       const shuffled = [...cards].sort(() => Math.random() - 0.5);
       const wordTasks: WordTask[] = shuffled.map((card) => {
         const lang = Math.random() < 0.5 ? 'en' : 'ru';
@@ -85,7 +86,6 @@ export default function DictationPrepPage() {
       if (!revealedLetters.has(i) && word[i] !== ' ') hiddenIndices.push(i);
     }
     if (hiddenIndices.length === 0) return;
-
     const toReveal = Math.min(HINTS_PER_USE, hiddenIndices.length);
     const shuffled = [...hiddenIndices].sort(() => Math.random() - 0.5);
     const newRevealed = new Set(revealedLetters);
@@ -101,13 +101,9 @@ export default function DictationPrepPage() {
     setLastCorrect(correct);
     setShowFeedback(true);
     setStats({ correct: correct ? stats.correct + 1 : stats.correct, incorrect: !correct ? stats.incorrect + 1 : stats.incorrect });
-
     if (profile) {
-      if (correct) {
-        trackActivityInBackground(supabase, profile.id, { dictation_tests_passed: 1, tests_passed: 1 });
-      } else {
-        trackActivityInBackground(supabase, profile.id, { tests_failed: 1 });
-      }
+      if (correct) trackActivityInBackground(supabase, profile.id, { dictation_tests_passed: 1, tests_passed: 1 });
+      else trackActivityInBackground(supabase, profile.id, { tests_failed: 1 });
     }
   }
 
@@ -131,7 +127,9 @@ export default function DictationPrepPage() {
           if (char === ' ') return <div key={i} className="w-4" />;
           const isRevealed = revealedLetters.has(i);
           return (
-            <div key={i} className={`w-10 h-12 flex items-center justify-center rounded-lg text-2xl font-bold ${isRevealed ? 'bg-yellow-100 border-2 border-yellow-400 text-yellow-800' : 'bg-gray-100 border-2 border-gray-300 text-gray-400'}`}>
+            <div key={i} className={`w-10 h-12 flex items-center justify-center rounded-xl text-xl font-bold border ${
+              isRevealed ? 'bg-amber-50 border-amber-300 text-amber-800' : 'bg-gray-100 border-gray-200 text-gray-400'
+            }`}>
               {isRevealed ? char : '_'}
             </div>
           );
@@ -144,20 +142,29 @@ export default function DictationPrepPage() {
     ? tasks[currentIndex].answer.split('').every((ch, i) => ch === ' ' || revealedLetters.has(i))
     : false;
 
+  const progress = tasks.length > 0 ? Math.round(((currentIndex + 1) / tasks.length) * 100) : 0;
+
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center"><p className="text-xl text-gray-800">Загрузка диктанта...</p></div>;
+    return (
+      <ImmersiveShell backHref={`/decks/${deckId}`} title="Диктант">
+        <div className="flex items-center justify-center h-full">
+          <p className="text-gray-500 text-sm">Загрузка диктанта...</p>
+        </div>
+      </ImmersiveShell>
+    );
   }
 
   if (tasks.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="text-center">
-          <div className="text-6xl mb-4">😕</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Нет карточек</h1>
-          <p className="text-gray-700 mb-6">В этом наборе пока нет карточек для диктанта</p>
-          <Link href={`/decks/${deckId}`} className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition">← Назад к набору</Link>
+      <ImmersiveShell backHref={`/decks/${deckId}`} title="Диктант">
+        <div className="flex items-center justify-center h-full px-4">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">😕</div>
+            <h1 className="text-xl font-bold text-gray-900 mb-2">Нет карточек</h1>
+            <p className="text-gray-500 text-sm">В этом наборе пока нет карточек для диктанта</p>
+          </div>
         </div>
-      </div>
+      </ImmersiveShell>
     );
   }
 
@@ -165,126 +172,126 @@ export default function DictationPrepPage() {
     const total = stats.correct + stats.incorrect;
     const percent = total > 0 ? Math.round((stats.correct / total) * 100) : 0;
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 py-8 px-4">
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 text-center">
-            <div className="text-6xl mb-4">{percent >= 80 ? '🎉' : percent >= 50 ? '👍' : '💪'}</div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Диктант завершён!</h1>
-            <p className="text-lg text-gray-600 mb-8">Вот твои результаты:</p>
+      <ImmersiveShell backHref={`/decks/${deckId}`} title="Результаты">
+        <div className="flex items-center justify-center py-8 px-4 h-full">
+          <div className="max-w-md w-full">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
+              <div className="text-5xl mb-4">{percent >= 80 ? '🎉' : percent >= 50 ? '👍' : '💪'}</div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-1">Диктант завершён!</h1>
+              <p className="text-gray-500 text-sm mb-7">Вот твои результаты:</p>
 
-            <div className="grid grid-cols-3 gap-4 mb-8">
-              <div className="bg-green-50 rounded-xl p-4">
-                <div className="text-3xl font-bold text-green-600">{stats.correct}</div>
-                <div className="text-sm text-green-700">Правильно</div>
+              <div className="grid grid-cols-3 gap-3 mb-7">
+                <div className="bg-[#057A55]/5 rounded-xl p-4">
+                  <div className="text-2xl font-bold text-[#057A55]">{stats.correct}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">Правильно</div>
+                </div>
+                <div className="bg-red-50 rounded-xl p-4">
+                  <div className="text-2xl font-bold text-red-500">{stats.incorrect}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">Ошибок</div>
+                </div>
+                <div className="bg-indigo-50 rounded-xl p-4">
+                  <div className="text-2xl font-bold text-indigo-600">{percent}%</div>
+                  <div className="text-xs text-gray-500 mt-0.5">Точность</div>
+                </div>
               </div>
-              <div className="bg-red-50 rounded-xl p-4">
-                <div className="text-3xl font-bold text-red-600">{stats.incorrect}</div>
-                <div className="text-sm text-red-700">Ошибок</div>
-              </div>
-              <div className="bg-indigo-50 rounded-xl p-4">
-                <div className="text-3xl font-bold text-indigo-600">{percent}%</div>
-                <div className="text-sm text-indigo-700">Точность</div>
-              </div>
-            </div>
 
-            <div className="w-full h-4 bg-gray-100 rounded-full mb-8 overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-green-400 to-green-600 transition-all duration-500" style={{ width: `${percent}%` }} />
-            </div>
+              <div className="w-full h-2 bg-gray-100 rounded-full mb-7 overflow-hidden">
+                <div className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${percent}%`, background: '#057A55' }} />
+              </div>
 
-            <div className="flex gap-4 justify-center">
-              <Link href={`/decks/${deckId}`} className="px-6 py-3 bg-gray-200 text-gray-800 rounded-xl font-semibold hover:bg-gray-300 transition">← К набору</Link>
-              <button
-                onClick={() => { setFinished(false); setCurrentIndex(0); setUserInput(''); setRevealedLetters(new Set()); setShowFeedback(false); setStats({ correct: 0, incorrect: 0 }); setHintsRemaining(TOTAL_HINTS); hasNavigated.current = false; loadCards(); }}
-                className="px-6 py-3 bg-indigo-500 text-white rounded-xl font-semibold hover:bg-indigo-600 transition"
-              >
-                Пройти ещё раз
-              </button>
+              <div className="flex gap-3 justify-center">
+                <Button variant="secondary" onClick={() => router.push(`/decks/${deckId}`)}>← К набору</Button>
+                <Button variant="primary" onClick={() => {
+                  setFinished(false); setCurrentIndex(0); setUserInput('');
+                  setRevealedLetters(new Set()); setShowFeedback(false);
+                  setStats({ correct: 0, incorrect: 0 }); setHintsRemaining(TOTAL_HINTS);
+                  hasNavigated.current = false; loadCards();
+                }}>
+                  Пройти ещё раз
+                </Button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </ImmersiveShell>
     );
   }
 
   const currentTask = tasks[currentIndex];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 py-8 px-4">
-      <div className="max-w-2xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <Link href={`/decks/${deckId}`} className="px-4 py-2 bg-white rounded-lg shadow text-gray-700 hover:bg-gray-50 font-medium">← Выход</Link>
-          <div className="flex items-center gap-4">
-            <div className="text-sm font-medium text-gray-700">{currentIndex + 1} из {tasks.length}</div>
-            <div className="flex gap-2">
-              <span className="px-3 py-1 bg-green-500 text-white rounded-full text-sm font-semibold">✓ {stats.correct}</span>
-              <span className="px-3 py-1 bg-red-500 text-white rounded-full text-sm font-semibold">✗ {stats.incorrect}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="w-full h-2 bg-white/50 rounded-full mb-8 overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-600 transition-all duration-300" style={{ width: `${((currentIndex + 1) / tasks.length) * 100}%` }} />
-        </div>
-
+    <ImmersiveShell
+      backHref={`/decks/${deckId}`}
+      title={`${currentIndex + 1} / ${tasks.length}`}
+      progress={progress}
+      leftBadge={<Badge variant="green">✓ {stats.correct}</Badge>}
+      rightBadge={<Badge variant="red">✗ {stats.incorrect}</Badge>}
+    >
+      <div className="py-6 px-4 max-w-2xl mx-auto">
         {!showFeedback ? (
           <>
-            <div className="bg-white rounded-2xl shadow-2xl p-8 mb-6">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 mb-4">
               <div className="text-center">
-                <p className="text-lg text-gray-600 mb-2">
+                <p className="text-sm text-gray-500 mb-4">
                   {currentTask.lang === 'en' ? 'Послушай и напиши слово на английском:' : 'Переведи на английский и напиши:'}
                 </p>
-                <button onClick={() => speakCurrent(currentTask)} className="px-8 py-4 bg-indigo-500 text-white rounded-xl text-2xl hover:bg-indigo-600 transition active:scale-95 mb-4">
+                <button onClick={() => speakCurrent(currentTask)}
+                  className="px-8 py-3.5 bg-[#057A55] text-white rounded-xl text-lg font-semibold hover:bg-[#065f46] transition active:scale-95 mb-4">
                   🔊 Воспроизвести
                 </button>
                 <div className="mb-2">
-                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${currentTask.lang === 'en' ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}>
+                  <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                    currentTask.lang === 'en' ? 'bg-indigo-50 text-indigo-700' : 'bg-amber-50 text-amber-700'
+                  }`}>
                     {currentTask.lang === 'en' ? '🇬🇧 English' : '🇷🇺 Русский'}
                   </span>
                 </div>
                 {renderMask(currentTask.answer)}
                 <button onClick={useHint} disabled={hintsRemaining <= 0 || allRevealed}
-                  className="px-6 py-2 bg-yellow-400 text-yellow-900 rounded-lg font-semibold hover:bg-yellow-500 transition disabled:opacity-40 disabled:cursor-not-allowed text-sm">
+                  className="px-5 py-2 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl text-sm font-semibold hover:bg-amber-100 transition disabled:opacity-40 disabled:cursor-not-allowed">
                   💡 Подсказка ({hintsRemaining})
                 </button>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-xl p-6">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
               <input type="text" value={userInput} onChange={(e) => setUserInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && userInput.trim()) handleSubmit(); }}
                 placeholder="Напиши слово на английском..."
-                className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl text-xl text-gray-900 focus:border-indigo-500 focus:outline-none mb-4"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-lg text-gray-900 focus:ring-2 focus:ring-[#057A55] focus:border-[#057A55] outline-none transition mb-3"
                 autoFocus />
-              <button onClick={handleSubmit} disabled={!userInput.trim()}
-                className="w-full py-4 bg-indigo-500 text-white rounded-xl font-bold text-xl hover:bg-indigo-600 transition disabled:opacity-50 disabled:cursor-not-allowed">
+              <Button variant="primary" fullWidth onClick={handleSubmit} disabled={!userInput.trim()}>
                 Ответить
-              </button>
+              </Button>
             </div>
           </>
         ) : (
-          <div className={`rounded-2xl shadow-2xl p-8 text-center ${lastCorrect ? 'bg-green-400 bg-gradient-to-br from-green-400 to-green-600' : 'bg-red-400 bg-gradient-to-br from-red-400 to-red-600'}`}>
+          <div className="rounded-2xl shadow-sm p-8 text-center"
+            style={{ background: lastCorrect ? 'linear-gradient(135deg, #057A55 0%, #065f46 100%)' : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' }}>
             <div className="text-white">
-              <div className="text-6xl mb-4">{lastCorrect ? '✅' : '❌'}</div>
-              <h2 className="text-3xl font-bold mb-4">{lastCorrect ? 'Правильно!' : 'Неправильно'}</h2>
+              <div className="text-5xl mb-4">{lastCorrect ? '✅' : '❌'}</div>
+              <h2 className="text-2xl font-bold mb-4">{lastCorrect ? 'Правильно!' : 'Неправильно'}</h2>
               {!lastCorrect && (
                 <>
-                  <div className="mb-4">
-                    <p className="text-white/80 text-sm mb-1">Правильный ответ:</p>
-                    <p className="text-2xl font-bold">{currentTask.answer}</p>
+                  <div className="mb-4 bg-white/10 rounded-xl p-3">
+                    <p className="text-white/70 text-xs mb-1">Правильный ответ:</p>
+                    <p className="text-xl font-bold">{currentTask.answer}</p>
                   </div>
-                  <div className="mb-4">
-                    <p className="text-white/80 text-sm mb-1">Ты написал:</p>
-                    <p className="text-xl">{userInput}</p>
+                  <div className="mb-4 bg-white/10 rounded-xl p-3">
+                    <p className="text-white/70 text-xs mb-1">Ты написал:</p>
+                    <p className="text-lg">{userInput}</p>
                   </div>
                 </>
               )}
-              <button onClick={handleNext} className="mt-4 px-8 py-4 bg-white text-gray-900 rounded-xl font-bold text-xl hover:bg-gray-100 transition">
+              <button onClick={handleNext}
+                className="mt-2 px-8 py-3 bg-white/20 hover:bg-white/30 text-white rounded-xl font-semibold text-base transition">
                 {currentIndex < tasks.length - 1 ? 'Далее →' : 'Завершить'}
               </button>
             </div>
           </div>
         )}
       </div>
-    </div>
+    </ImmersiveShell>
   );
 }

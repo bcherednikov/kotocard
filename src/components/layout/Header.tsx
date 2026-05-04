@@ -2,13 +2,17 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 
 export function Header() {
   const { user, profile, signOut } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const internalRoutes = ['/dashboard', '/decks', '/review', '/groups', '/achievements', '/grammar'];
+  const isInternalPage = internalRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`));
 
   // Закрывать меню при изменении размера окна
   useEffect(() => {
@@ -55,6 +59,10 @@ export function Header() {
   }
 
   const logoHref = user ? '/dashboard' : '/';
+
+  if (user && isInternalPage) {
+    return null;
+  }
 
   return (
     <>

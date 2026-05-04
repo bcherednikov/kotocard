@@ -36,7 +36,6 @@ export default function MemberStatsPage() {
   async function loadStats() {
     if (!profile) return;
     try {
-      // Проверить роль
       const { data: membership } = await supabase
         .from('group_members')
         .select('role')
@@ -51,7 +50,6 @@ export default function MemberStatsPage() {
       }
       setIsAdmin(true);
 
-      // Группа
       const { data: group } = await supabase
         .from('groups')
         .select('name')
@@ -59,7 +57,6 @@ export default function MemberStatsPage() {
         .single();
       setGroupName(group?.name || '');
 
-      // Участник
       const { data: memberProfile } = await supabase
         .from('profiles')
         .select('display_name')
@@ -67,7 +64,6 @@ export default function MemberStatsPage() {
         .single();
       setMemberName(memberProfile?.display_name || 'Без имени');
 
-      // Колоды группы
       const { data: groupDecks } = await supabase
         .from('group_decks')
         .select('deck_id, decks(id, name)')
@@ -81,7 +77,6 @@ export default function MemberStatsPage() {
 
       const deckIds = groupDecks.map(gd => (gd.decks as any).id);
 
-      // Все карточки по колодам
       const { data: allCards } = await supabase
         .from('cards')
         .select('id, deck_id')
@@ -92,14 +87,12 @@ export default function MemberStatsPage() {
         cardsByDeck[c.deck_id] = (cardsByDeck[c.deck_id] || 0) + 1;
       });
 
-      // user_cards для участника по этим колодам
       const { data: userCards } = await supabase
         .from('user_cards')
         .select('deck_id, status')
         .eq('user_id', userId)
         .in('deck_id', deckIds);
 
-      // Группировать по колоде
       const statusByDeck: Record<string, Record<string, number>> = {};
       (userCards || []).forEach(uc => {
         if (!statusByDeck[uc.deck_id]) statusByDeck[uc.deck_id] = {};
@@ -148,18 +141,19 @@ export default function MemberStatsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-xl text-gray-800">Загрузка...</p>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#F7F5F0' }}>
+        <p className="text-gray-500 text-sm">Загрузка...</p>
       </div>
     );
   }
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#F7F5F0' }}>
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Нет доступа</h1>
-          <Link href={`/groups/${groupId}`} className="text-blue-600 hover:text-blue-800 font-medium">
+          <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-xl">🔒</div>
+          <h1 className="text-xl font-bold text-gray-900 mb-2">Нет доступа</h1>
+          <Link href={`/groups/${groupId}`} className="text-[#057A55] hover:text-[#065f46] font-medium text-sm">
             ← К группе
           </Link>
         </div>
@@ -167,72 +161,74 @@ export default function MemberStatsPage() {
     );
   }
 
-  // Общая статистика
   const totalAll = deckStats.reduce((s, d) => s + d.stats.total, 0);
   const masteredAll = deckStats.reduce((s, d) => s + d.stats.masteredCount, 0);
   const overallPercent = totalAll > 0 ? Math.round((masteredAll / totalAll) * 100) : 0;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen" style={{ background: '#F7F5F0' }}>
+      <div className="max-w-3xl mx-auto px-4 py-8">
         <div className="mb-6">
-          <Link href={`/groups/${groupId}/stats`} className="text-blue-600 hover:text-blue-800 font-medium">
-            ← К статистике группы
+          <Link href={`/groups/${groupId}/stats`} className="inline-flex items-center gap-1.5 text-[#057A55] hover:text-[#065f46] font-medium text-sm transition">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+            К статистике группы
           </Link>
         </div>
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">{memberName}</h1>
-          <p className="text-gray-600">Статистика в группе "{groupName}"</p>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">{memberName}</h1>
+          <p className="text-gray-500 text-sm mt-0.5">Статистика в группе «{groupName}»</p>
         </div>
 
         {/* Общая */}
-        <div className="bg-purple-600 bg-gradient-to-r from-purple-600 to-indigo-700 rounded-2xl p-6 text-white mb-8">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-5">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-lg font-medium">Общий прогресс</span>
-            <span className="text-3xl font-bold">{overallPercent}%</span>
+            <span className="font-semibold text-gray-900 text-sm">Общий прогресс</span>
+            <span className="text-2xl font-bold text-[#057A55]">{overallPercent}%</span>
           </div>
-          <div className="w-full h-3 bg-white/30 rounded-full overflow-hidden">
+          <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2">
             <div
-              className="h-full bg-white transition-all duration-500"
-              style={{ width: `${overallPercent}%` }}
+              className="h-full rounded-full transition-all duration-500"
+              style={{ width: `${overallPercent}%`, background: '#057A55' }}
             />
           </div>
-          <div className="text-sm text-purple-200 mt-2">
-            Выучено {masteredAll} из {totalAll} карточек
-          </div>
+          <p className="text-xs text-gray-400">Выучено {masteredAll} из {totalAll} карточек</p>
         </div>
 
         {/* По колодам */}
         {deckStats.length === 0 ? (
-          <p className="text-gray-600">Нет наборов в группе</p>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
+            <p className="text-gray-500 text-sm">Нет наборов в группе</p>
+          </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {deckStats.map(ds => (
-              <div key={ds.deck_id} className="bg-white rounded-xl shadow-lg p-6">
+              <div key={ds.deck_id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-bold text-gray-900">{ds.deck_name}</h3>
-                  <span className="text-lg font-bold text-purple-600">{ds.stats.masteryPercent}%</span>
+                  <h3 className="font-semibold text-gray-900 text-sm">{ds.deck_name}</h3>
+                  <span className="font-bold text-[#057A55]">{ds.stats.masteryPercent}%</span>
                 </div>
                 <DeckSrsProgress stats={ds.stats} />
-                <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                <div className="mt-3 flex flex-wrap gap-1.5 text-xs">
                   {ds.stats.newCount > 0 && (
-                    <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded">Новые: {ds.stats.newCount}</span>
+                    <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded-lg">Новые: {ds.stats.newCount}</span>
                   )}
                   {ds.stats.learningCount > 0 && (
-                    <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">Изучение: {ds.stats.learningCount}</span>
+                    <span className="px-2 py-1 bg-amber-50 text-amber-700 rounded-lg">Изучение: {ds.stats.learningCount}</span>
                   )}
                   {ds.stats.testingCount > 0 && (
-                    <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded">Тестирование: {ds.stats.testingCount}</span>
+                    <span className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded-lg">Тестирование: {ds.stats.testingCount}</span>
                   )}
                   {ds.stats.youngCount > 0 && (
-                    <span className="px-2 py-1 bg-green-100 text-green-700 rounded">Молодые: {ds.stats.youngCount}</span>
+                    <span className="px-2 py-1 bg-[#057A55]/10 text-[#057A55] rounded-lg">Молодые: {ds.stats.youngCount}</span>
                   )}
                   {ds.stats.matureCount > 0 && (
-                    <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded">Зрелые: {ds.stats.matureCount}</span>
+                    <span className="px-2 py-1 bg-teal-50 text-teal-700 rounded-lg">Зрелые: {ds.stats.matureCount}</span>
                   )}
                   {ds.stats.relearningCount > 0 && (
-                    <span className="px-2 py-1 bg-red-100 text-red-700 rounded">Переучивание: {ds.stats.relearningCount}</span>
+                    <span className="px-2 py-1 bg-red-50 text-red-600 rounded-lg">Переучивание: {ds.stats.relearningCount}</span>
                   )}
                 </div>
               </div>

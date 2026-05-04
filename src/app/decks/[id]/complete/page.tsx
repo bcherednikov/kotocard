@@ -17,13 +17,10 @@ function CompletePageContent() {
   useEffect(() => {
     const correctCount = parseInt(searchParams.get('correct') || '0');
     const incorrectCount = parseInt(searchParams.get('incorrect') || '0');
-
     setCorrect(correctCount);
     setIncorrect(incorrectCount);
-
     const total = correctCount + incorrectCount;
     const percentage = total > 0 ? (correctCount / total) * 100 : 0;
-
     if (percentage >= 70) {
       setShowConfetti(true);
       setTimeout(() => setShowConfetti(false), 3000);
@@ -35,16 +32,14 @@ function CompletePageContent() {
 
   let emoji = '👍';
   let message = 'Хорошая работа!';
-  let color = 'from-blue-500 to-purple-600';
-  let colorFallback = 'bg-blue-500';
+  if (percentage >= 90) { emoji = '🏆'; message = 'Отлично! Ты молодец!'; }
+  else if (percentage >= 70) { emoji = '🌟'; message = 'Очень хорошо!'; }
+  else if (percentage < 50) { emoji = '💪'; message = 'Ничего страшного! Попробуй ещё раз!'; }
 
-  if (percentage >= 90) { emoji = '🏆'; message = 'Отлично! Ты молодец!'; color = 'from-yellow-400 to-orange-500'; colorFallback = 'bg-yellow-400'; }
-  else if (percentage >= 70) { emoji = '🌟'; message = 'Очень хорошо!'; color = 'from-green-500 to-blue-500'; colorFallback = 'bg-green-500'; }
-  else if (percentage >= 50) { emoji = '👍'; message = 'Неплохо! Продолжай учить!'; color = 'from-blue-500 to-purple-600'; colorFallback = 'bg-blue-500'; }
-  else { emoji = '💪'; message = 'Ничего страшного! Попробуй ещё раз!'; color = 'from-purple-500 to-pink-600'; colorFallback = 'bg-purple-500'; }
+  const progressColor = percentage >= 90 ? '#f59e0b' : percentage >= 70 ? '#057A55' : percentage >= 50 ? '#6366f1' : '#ef4444';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 py-12 px-4">
+    <div className="min-h-screen py-12 px-4" style={{ background: '#F7F5F0' }}>
       {showConfetti && (
         <div className="fixed inset-0 pointer-events-none z-50">
           {[...Array(50)].map((_, i) => (
@@ -56,55 +51,57 @@ function CompletePageContent() {
         </div>
       )}
 
-      <div className="max-w-2xl mx-auto">
-        <div className={`${colorFallback} bg-gradient-to-br ${color} rounded-2xl shadow-2xl p-12 mb-8 text-white text-center`}>
-          <div className="text-8xl mb-6">{emoji}</div>
-          <h1 className="text-4xl font-bold mb-4">{message}</h1>
-          <p className="text-2xl mb-8">Сессия завершена!</p>
+      <div className="max-w-md mx-auto">
+        {/* Hero */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 mb-4 text-center">
+          <div className="text-6xl mb-4">{emoji}</div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">{message}</h1>
+          <p className="text-gray-500 text-sm mb-7">Сессия завершена</p>
 
-          <div className="relative inline-flex items-center justify-center mb-8">
-            <svg className="transform -rotate-90 w-40 h-40">
-              <circle cx="80" cy="80" r="70" stroke="currentColor" strokeWidth="10" fill="transparent" className="text-white/30" />
-              <circle cx="80" cy="80" r="70" stroke="currentColor" strokeWidth="10" fill="transparent"
-                strokeDasharray={`${2 * Math.PI * 70}`}
-                strokeDashoffset={`${2 * Math.PI * 70 * (1 - percentage / 100)}`}
-                className="text-white transition-all duration-1000" />
+          <div className="relative inline-flex items-center justify-center mb-7">
+            <svg className="transform -rotate-90 w-32 h-32">
+              <circle cx="64" cy="64" r="54" stroke="#f3f4f6" strokeWidth="10" fill="transparent" />
+              <circle cx="64" cy="64" r="54" stroke={progressColor} strokeWidth="10" fill="transparent"
+                strokeDasharray={`${2 * Math.PI * 54}`}
+                strokeDashoffset={`${2 * Math.PI * 54 * (1 - percentage / 100)}`}
+                className="transition-all duration-1000" />
             </svg>
             <div className="absolute text-center">
-              <div className="text-5xl font-bold">{percentage}%</div>
+              <div className="text-3xl font-bold text-gray-900">{percentage}%</div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-gray-50 rounded-xl p-3">
+              <div className="text-2xl font-bold text-gray-700">{total}</div>
+              <div className="text-xs text-gray-400 mt-0.5">Всего</div>
+            </div>
+            <div className="bg-[#057A55]/5 rounded-xl p-3">
+              <div className="text-2xl font-bold text-[#057A55]">{correct}</div>
+              <div className="text-xs text-gray-400 mt-0.5">Правильно</div>
+            </div>
+            <div className="bg-red-50 rounded-xl p-3">
+              <div className="text-2xl font-bold text-red-500">{incorrect}</div>
+              <div className="text-xs text-gray-400 mt-0.5">Ошибки</div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Результаты</h2>
-          <div className="grid grid-cols-3 gap-6 text-center">
-            <div>
-              <div className="text-4xl font-bold text-blue-600 mb-2">{total}</div>
-              <div className="text-sm text-gray-600">Всего карточек</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-green-600 mb-2">{correct}</div>
-              <div className="text-sm text-gray-600">Правильно ✓</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-red-600 mb-2">{incorrect}</div>
-              <div className="text-sm text-gray-600">Неправильно ✗</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <Link href={`/decks/${deckId}`} className="py-4 bg-white text-center rounded-xl font-bold text-lg hover:bg-gray-50 transition shadow-lg text-gray-700">
-            ← Назад к набору
+        {/* Actions */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <Link href={`/decks/${deckId}`}
+            className="py-3 bg-white border border-gray-200 text-center rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition shadow-sm">
+            ← К набору
           </Link>
-          <Link href={`/decks/${deckId}/study`} className="py-4 bg-blue-500 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-center rounded-xl font-bold text-lg hover:from-blue-600 hover:to-purple-700 transition shadow-lg">
+          <Link href={`/decks/${deckId}/study`}
+            className="py-3 text-white text-center rounded-xl text-sm font-semibold transition shadow-sm"
+            style={{ background: '#057A55' }}>
             Повторить →
           </Link>
         </div>
 
-        <div className="text-center mt-8">
-          <Link href="/decks" className="text-gray-600 hover:text-gray-900 font-medium">
+        <div className="text-center">
+          <Link href="/decks" className="text-gray-400 hover:text-gray-600 text-sm">
             Вернуться ко всем наборам
           </Link>
         </div>
@@ -120,7 +117,11 @@ function CompletePageContent() {
 
 export default function CompletePage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><p className="text-xl text-gray-800">Загрузка...</p></div>}>
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#F7F5F0' }}>
+        <p className="text-gray-500 text-sm">Загрузка...</p>
+      </div>
+    }>
       <CompletePageContent />
     </Suspense>
   );

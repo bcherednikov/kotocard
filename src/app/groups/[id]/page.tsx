@@ -5,6 +5,12 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { PageHeader } from '@/components/ui/page-header';
+import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PageSkeleton } from '@/components/ui/loading-skeleton';
 
 type Group = {
   id: string;
@@ -48,7 +54,6 @@ export default function GroupDetailPage() {
   async function loadGroup() {
     if (!profile) return;
     try {
-      // Загрузить группу
       const { data: groupData, error: groupError } = await supabase
         .from('groups')
         .select('*')
@@ -58,7 +63,6 @@ export default function GroupDetailPage() {
       if (groupError) throw groupError;
       setGroup(groupData);
 
-      // Загрузить участников с профилями
       const { data: membersData, error: memError } = await supabase
         .from('group_members')
         .select('id, user_id, role, joined_at, profiles(display_name)')
@@ -79,7 +83,6 @@ export default function GroupDetailPage() {
       const me = membersList.find(m => m.user_id === profile.id);
       setMyRole(me?.role || null);
 
-      // Загрузить колоды группы
       const { data: groupDecks, error: gdError } = await supabase
         .from('group_decks')
         .select('id, deck_id, decks(id, name)')
@@ -90,7 +93,6 @@ export default function GroupDetailPage() {
       if (groupDecks && groupDecks.length > 0) {
         const deckIds = groupDecks.map(gd => (gd.decks as any).id);
 
-        // Подсчитать карточки
         const { data: cards } = await supabase
           .from('cards')
           .select('deck_id')
@@ -137,137 +139,136 @@ export default function GroupDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-xl text-gray-800">Загрузка группы...</p>
+      <div className="px-4 py-6 max-w-3xl mx-auto">
+        <PageSkeleton rows={3} />
       </div>
     );
   }
 
   if (!group) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Группа не найдена</h1>
-          <Link href="/groups" className="text-blue-600 hover:text-blue-800 font-medium">
-            ← К группам
-          </Link>
-        </div>
+      <div className="px-4 py-6 max-w-3xl mx-auto">
+        <Card>
+          <EmptyState
+            title="Группа не найдена"
+            description="Группа могла быть удалена или у вас нет доступа"
+            cta={{ label: '← К группам', href: '/groups' }}
+          />
+        </Card>
       </div>
     );
   }
 
   const isAdmin = myRole === 'admin';
 
+  function memberLabel(count: number) {
+    if (count === 1) return '1 участник';
+    if (count < 5) return `${count} участника`;
+    return `${count} участников`;
+  }
+
+  function deckLabel(count: number) {
+    if (count === 1) return '1 набор';
+    if (count < 5) return `${count} набора`;
+    return `${count} наборов`;
+  }
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-3xl mx-auto">
-        <div className="mb-6">
-          <Link href="/groups" className="text-blue-600 hover:text-blue-800 font-medium">
-            ← К группам
-          </Link>
-        </div>
+    <div className="px-4 py-6 max-w-3xl mx-auto">
+      <PageHeader
+        title={group.name}
+        description={group.description ?? undefined}
+        back="/groups"
+        actions={
+          isAdmin ? (
+            <>
+              <Button as="a" href={`/groups/${groupId}/stats`} variant="secondary" size="sm">
+                Статистика
+              </Button>
+              <Button as="a" href={`/groups/${groupId}/settings`} variant="primary" size="sm">
+                Настройки
+              </Button>
+            </>
+          ) : undefined
+        }
+      />
 
-        {/* Шапка группы */}
-        <div className="bg-purple-600 bg-gradient-to-r from-purple-600 to-indigo-700 rounded-2xl p-8 text-white mb-8">
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">{group.name}</h1>
-              {group.description && <p className="text-purple-200">{group.description}</p>}
-              <div className="flex gap-4 mt-4 text-sm text-purple-200">
-                <span>👥 {members.length} участник{members.length === 1 ? '' : members.length < 5 ? 'а' : 'ов'}</span>
-                <span>📚 {decks.length} набор{decks.length === 1 ? '' : decks.length < 5 ? 'а' : 'ов'}</span>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              {isAdmin && (
-                <>
-                  <Link
-                    href={`/groups/${groupId}/stats`}
-                    className="px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition text-sm font-medium"
-                  >
-                    Статистика
-                  </Link>
-                  <Link
-                    href={`/groups/${groupId}/settings`}
-                    className="px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition text-sm font-medium"
-                  >
-                    Настройки
-                  </Link>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
+      {/* Stats strip */}
+      <div className="flex gap-4 mb-6 text-sm text-gray-500">
+        <span>👥 {memberLabel(members.length)}</span>
+        <span>📚 {deckLabel(decks.length)}</span>
+      </div>
 
-        {/* Наборы группы */}
-        <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Наборы</h2>
+      <div className="space-y-4">
+        {/* Decks card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Наборы</CardTitle>
+          </CardHeader>
           {decks.length === 0 ? (
-            <div className="bg-gray-50 rounded-xl p-8 text-center">
-              <p className="text-gray-600">В группе пока нет наборов</p>
-              {isAdmin && (
-                <p className="text-gray-500 mt-2 text-sm">
-                  Добавьте наборы в настройках группы
-                </p>
-              )}
-            </div>
+            <EmptyState
+              icon="📚"
+              title="В группе пока нет наборов"
+              description={isAdmin ? 'Добавьте наборы в настройках группы' : undefined}
+            />
           ) : (
-            <div className="space-y-3">
+            <CardContent className="pt-3 space-y-2">
               {decks.map(deck => (
                 <Link
                   key={deck.id}
                   href={`/decks/${deck.deck_id}`}
-                  className="block bg-white rounded-xl shadow p-5 hover:shadow-lg transition"
+                  className="flex items-center justify-between p-3 rounded-xl border border-gray-100 hover:bg-gray-50 hover:border-gray-200 transition"
                 >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="font-bold text-gray-900">{deck.title}</h3>
-                      <p className="text-sm text-gray-500">{deck.card_count} карточек</p>
-                    </div>
-                    <span className="text-gray-400">→</span>
+                  <div>
+                    <span className="font-medium text-gray-900 text-sm">{deck.title}</span>
+                    <p className="text-xs text-gray-400 mt-0.5">{deck.card_count} карточек</p>
                   </div>
+                  <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
                 </Link>
               ))}
-            </div>
+            </CardContent>
           )}
-        </div>
+        </Card>
 
-        {/* Участники */}
-        <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Участники</h2>
-          <div className="bg-white rounded-xl shadow divide-y">
+        {/* Members card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Участники</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-3 divide-y divide-gray-50 -mx-0">
             {members.map(member => (
-              <div key={member.id} className="p-4 flex items-center justify-between">
+              <div key={member.id} className="py-3 flex items-center justify-between first:pt-0">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-purple-400 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-bold">
+                  <div className="w-9 h-9 bg-[#057A55]/10 rounded-xl flex items-center justify-center text-[#057A55] font-bold text-sm shrink-0">
                     {member.display_name[0]?.toUpperCase()}
                   </div>
                   <div>
-                    <span className="font-medium text-gray-900">{member.display_name}</span>
+                    <span className="font-medium text-gray-900 text-sm">{member.display_name}</span>
                     {member.user_id === profile?.id && (
-                      <span className="text-gray-500 ml-1">(вы)</span>
+                      <span className="text-gray-400 text-xs ml-1">(вы)</span>
                     )}
                   </div>
                 </div>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                  member.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'
-                }`}>
+                <Badge variant={member.role === 'admin' ? 'green' : 'gray'}>
                   {member.role === 'admin' ? 'Админ' : 'Участник'}
-                </span>
+                </Badge>
               </div>
             ))}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* Выход из группы */}
-        <div className="text-center">
-          <button
+        {/* Leave group */}
+        <div className="flex justify-center pt-2">
+          <Button
+            variant="danger"
+            size="sm"
+            loading={leaving}
             onClick={handleLeave}
-            disabled={leaving}
-            className="text-red-600 hover:text-red-800 font-medium transition disabled:opacity-50"
           >
-            {leaving ? 'Выходим...' : 'Выйти из группы'}
-          </button>
+            Выйти из группы
+          </Button>
         </div>
       </div>
     </div>

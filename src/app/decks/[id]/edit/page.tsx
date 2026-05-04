@@ -5,6 +5,11 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent } from '@/components/ui/card';
+import { PageHeader } from '@/components/ui/page-header';
 
 export default function EditDeckPage() {
   const router = useRouter();
@@ -79,7 +84,7 @@ export default function EditDeckPage() {
       <div className="container mx-auto px-4 py-16 text-center">
         <div className="text-6xl mb-4">&#10060;</div>
         <h1 className="text-2xl font-bold text-gray-900 mb-4">Набор не найден</h1>
-        <Link href="/decks" className="text-blue-600 hover:text-blue-800 font-medium">← Вернуться к наборам</Link>
+        <Link href="/decks" className="text-[#057A55] hover:underline font-medium">← Вернуться к наборам</Link>
       </div>
     );
   }
@@ -87,62 +92,71 @@ export default function EditDeckPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-2xl mx-auto">
-        <div className="mb-6">
-          <Link href={`/decks/${deckId}`} className="text-blue-600 hover:text-blue-800 font-medium">
-            ← Назад к набору
-          </Link>
-        </div>
+        <PageHeader
+          title="Редактировать набор"
+          back={`/decks/${deckId}`}
+          description="Измените название, описание или теги"
+        />
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Редактировать набор</h1>
-          <p className="text-gray-700">Измените название, описание или теги</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-lg p-8">
-          <div className="space-y-6">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-900 mb-2">Название набора *</label>
-              <input id="name" type="text" value={name} onChange={(e) => setName(e.target.value)}
+        <Card>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <Input
+                label="Название набора *"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 placeholder="Например: Английские слова для детей"
-                className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-gray-900 placeholder:text-gray-500"
-                required disabled={saving} />
-            </div>
+                required
+                disabled={saving}
+              />
 
-            <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-900 mb-2">Описание</label>
-              <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)}
-                placeholder="Краткое описание набора (необязательно)" rows={4}
-                className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-gray-900 placeholder:text-gray-500"
-                disabled={saving} />
-            </div>
+              <Textarea
+                label="Описание"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Краткое описание набора (необязательно)"
+                rows={4}
+                disabled={saving}
+              />
 
-            <div>
-              <label htmlFor="tags" className="block text-sm font-medium text-gray-900 mb-2">Теги</label>
-              <input id="tags" type="text" value={tagsInput} onChange={(e) => setTagsInput(e.target.value)}
+              <Input
+                label="Теги"
+                type="text"
+                value={tagsInput}
+                onChange={(e) => setTagsInput(e.target.value)}
                 placeholder="английский, начинающий, дети (через запятую)"
-                className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-gray-900 placeholder:text-gray-500"
-                disabled={saving} />
-              <p className="mt-1 text-xs text-gray-700">Введите теги через запятую или пробел</p>
-            </div>
+                helper="Введите теги через запятую или пробел"
+                disabled={saving}
+              />
 
-            {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-800">{error}</p>
+              {error && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+                  <p className="text-sm text-red-800">{error}</p>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-1">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => router.push(`/decks/${deckId}`)}
+                  disabled={saving}
+                >
+                  Отмена
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  fullWidth
+                  loading={saving}
+                >
+                  {saving ? 'Сохраняем...' : 'Сохранить'}
+                </Button>
               </div>
-            )}
-
-            <div className="flex gap-4">
-              <Link href={`/decks/${deckId}`}
-                className="px-6 py-3 border-2 border-gray-400 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition">
-                Отмена
-              </Link>
-              <button type="submit" disabled={saving}
-                className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
-                {saving ? 'Сохраняем...' : 'Сохранить'}
-              </button>
-            </div>
-          </div>
-        </form>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

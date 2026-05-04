@@ -3,6 +3,6 @@
 import { ProtectedAppShell } from "@/components/layout/ProtectedAppShell";
 import { type ReactNode } from "react";
 
-export default function ReviewLayout({ children }: { children: ReactNode }) {
+export default function AchievementsLayout({ children }: { children: ReactNode }) {
   return <ProtectedAppShell>{children}</ProtectedAppShell>;
 }
