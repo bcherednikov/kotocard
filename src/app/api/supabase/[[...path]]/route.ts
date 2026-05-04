@@ -75,18 +75,25 @@ async function fetchUpstream(
   const attempts = isStreamBody ? 1 : 4;
   let lastErr: unknown;
   for (let i = 0; i < attempts; i++) {
+    const controller = new AbortController();
+    // 25s timeout — nginx proxy_read_timeout usually 60s; fail fast to avoid 504
+    const timer = setTimeout(() => controller.abort(), 25_000);
     const init: RequestInit & { duplex?: 'half' } = {
       method,
       headers,
       redirect: 'follow',
       body,
+      signal: controller.signal,
     };
     if (isStreamBody && body != null) {
       init.duplex = 'half';
     }
     try {
-      return await fetch(target, init);
+      const res = await fetch(target, init);
+      clearTimeout(timer);
+      return res;
     } catch (e) {
+      clearTimeout(timer);
       lastErr = e;
       if (!isRetryableFetchError(e) || i === attempts - 1) throw e;
       await sleep(120 * 2 ** i);

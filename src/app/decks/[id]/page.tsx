@@ -6,7 +6,11 @@ import { supabase } from '@/lib/supabase/client';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ensureUserCardsExist, getDeckSrsStats } from '@/lib/srs/queries';
+import { fetchUnsplashUrl } from '@/lib/unsplash';
 import { DeckSrsProgress } from '@/components/student/DeckSrsProgress';
+import { Button } from '@/components/ui/button';
+import { Card as UiCard, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import type { DeckSrsStats } from '@/lib/srs/types';
 
 type Deck = {
@@ -25,6 +29,7 @@ type Card = {
   audio_url: string | null;
   tts_en_url: string | null;
   tts_ru_url: string | null;
+  image_url: string | null;
   position: number;
 };
 
@@ -46,6 +51,7 @@ export default function DeckDetailPage() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [generatingTts, setGeneratingTts] = useState(false);
+  const [fetchingImages, setFetchingImages] = useState(false);
 
   const deckId = params.id as string;
   const isOwner = deck && user && deck.owner_id === user.id;
@@ -57,33 +63,33 @@ export default function DeckDetailPage() {
   async function loadAll() {
     if (!user || !profile) return;
     try {
-      const { data, error } = await supabase
-        .from('decks')
-        .select('*')
-        .eq('id', deckId)
-        .single();
+      // deck + cards in parallel
+      const [deckResult, cardsResult] = await Promise.all([
+        supabase.from('decks').select('*').eq('id', deckId).single(),
+        supabase.from('cards')
+          .select('id, ru_text, en_text, audio_url, tts_en_url, tts_ru_url, image_url, position')
+          .eq('deck_id', deckId)
+          .order('position', { ascending: true }),
+      ]);
 
-      if (error) throw error;
-      setDeck(data);
+      if (deckResult.error) throw deckResult.error;
+      setDeck(deckResult.data);
+      const loadedCards = cardsResult.data || [];
+      setCards(loadedCards);
 
-      // Load cards list (for owner management)
-      const { data: cardsData } = await supabase
-        .from('cards')
-        .select('id, ru_text, en_text, audio_url, tts_en_url, tts_ru_url, position')
-        .eq('deck_id', deckId)
-        .order('position', { ascending: true });
-      setCards(cardsData || []);
-
-      // Ensure user_cards exist + load SRS stats
-      await ensureUserCardsExist(supabase, user.id, deckId);
-      const s = await getDeckSrsStats(supabase, user.id, deckId);
+      // ensureUserCards (reuse already-loaded IDs) + SRS stats in parallel
+      const cardIds = loadedCards.map((c) => c.id);
+      const [, s] = await Promise.all([
+        ensureUserCardsExist(supabase, user.id, deckId, cardIds),
+        getDeckSrsStats(supabase, user.id, deckId),
+      ]);
       setStats(s);
 
-      // Load TTS stats
-      try {
-        const res = await fetch(`/api/decks/${deckId}/generate-tts`);
-        if (res.ok) setTtsStats(await res.json());
-      } catch {}
+      // TTS stats are non-critical — load in background
+      fetch(`/api/decks/${deckId}/generate-tts`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => { if (data) setTtsStats(data); })
+        .catch(() => {});
     } catch (err) {
       console.error('Error loading deck:', err);
     } finally {
@@ -108,6 +114,28 @@ export default function DeckDetailPage() {
     } finally {
       setGeneratingTts(false);
     }
+  }
+
+  async function handleFetchAllImages() {
+    const missing = cards.filter(c => !c.image_url);
+    if (missing.length === 0) return;
+    setFetchingImages(true);
+    for (const card of missing) {
+      const imageUrl = await fetchUnsplashUrl(card.en_text);
+      if (imageUrl) {
+        await supabase.from('cards').update({ image_url: imageUrl }).eq('id', card.id);
+        setCards(prev => prev.map(c => c.id === card.id ? { ...c, image_url: imageUrl } : c));
+      }
+    }
+    setFetchingImages(false);
+  }
+
+  async function handleRefreshImage(card: Card) {
+    const page = Math.floor(Math.random() * 20) + 1;
+    const imageUrl = await fetchUnsplashUrl(card.en_text, page);
+    if (!imageUrl) return;
+    await supabase.from('cards').update({ image_url: imageUrl }).eq('id', card.id);
+    setCards(prev => prev.map(c => c.id === card.id ? { ...c, image_url: imageUrl } : c));
   }
 
   async function handleDeleteCard(cardId: string) {
@@ -137,20 +165,26 @@ export default function DeckDetailPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-16 text-center">
-        <p className="text-xl text-gray-800">Загрузка...</p>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#F7F5F0' }}>
+        <UiCard className="w-full max-w-sm">
+          <CardContent className="py-8 text-center text-sm text-muted-foreground">Загрузка...</CardContent>
+        </UiCard>
       </div>
     );
   }
 
   if (!deck) {
     return (
-      <div className="container mx-auto px-4 py-16 text-center">
-        <div className="text-6xl mb-4">&#10060;</div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">Набор не найден</h1>
-        <Link href="/decks" className="text-blue-600 hover:text-blue-800 font-medium">
-          ← Вернуться к наборам
-        </Link>
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: '#F7F5F0' }}>
+        <UiCard className="w-full max-w-sm">
+          <CardHeader>
+            <CardTitle>Набор не найден</CardTitle>
+            <CardDescription>Проверьте ссылку или вернитесь к списку наборов.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button render={<Link href="/decks" />}>Вернуться к наборам</Button>
+          </CardContent>
+        </UiCard>
       </div>
     );
   }
@@ -160,230 +194,241 @@ export default function DeckDetailPage() {
   const reviewCount = stats ? (stats.total - stats.newCount) : 0;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-6">
-          <Link href="/decks" className="text-blue-600 hover:text-blue-800 font-medium">
-            ← Назад к наборам
-          </Link>
+    <div className="max-w-3xl mx-auto md:mx-0">
+      <div>
+
+        {/* Back link */}
+        <div className="mb-5">
+          <Button variant="link" render={<Link href="/decks" />}>Назад к наборам</Button>
         </div>
 
-        {/* Deck header with SRS progress */}
-        <div className="bg-blue-500 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-2xl p-8 mb-8 text-white">
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold mb-2">{deck.name}</h1>
+        {/* Deck header */}
+        <UiCard className="mb-6">
+          <CardContent className="p-6 md:p-8">
+          <div className="flex justify-between items-start gap-4">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl font-bold text-gray-900 mb-1">{deck.name}</h1>
               {deck.description && (
-                <p className="text-blue-100 mb-4">{deck.description}</p>
+                <p className="text-gray-500 text-sm mb-4">{deck.description}</p>
+              )}
+              {deck.tags && deck.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {deck.tags.map((tag, idx) => (
+                    <Badge key={idx} variant="outline">{tag}</Badge>
+                  ))}
+                </div>
               )}
             </div>
             {isOwner && (
-              <div className="flex items-center gap-2 ml-4">
-                <Link
-                  href={`/decks/${deckId}/edit`}
-                  className="px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-lg font-medium hover:bg-white/30 transition"
-                >
-                  Изменить
-                </Link>
-                <button
+              <div className="flex items-center gap-2 shrink-0">
+                <Button variant="outline" render={<Link href={`/decks/${deckId}/edit`} />}>Изменить</Button>
+                <Button
+                  variant="destructive"
                   onClick={handleDeleteDeck}
                   disabled={deleting}
-                  className="px-4 py-2 bg-red-500/80 text-white rounded-lg font-medium hover:bg-red-600 transition disabled:opacity-50"
                 >
                   {deleting ? '...' : 'Удалить'}
-                </button>
+                </Button>
               </div>
             )}
           </div>
-          {deck.tags && deck.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-4">
-              {deck.tags.map((tag, idx) => (
-                <span key={idx} className="px-3 py-1 bg-white/20 text-white text-sm rounded-full">
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
           {stats && (
-            <div className="flex justify-center">
-              <DeckSrsProgress stats={stats} variant="onDark" />
+            <div className="mt-6 pt-6 border-t border-gray-100">
+              <DeckSrsProgress stats={stats} variant="default" />
             </div>
           )}
-        </div>
+          </CardContent>
+        </UiCard>
 
         {/* Study modes */}
         {stats !== null && stats.total > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <Link
-              href={`/decks/${deckId}/study`}
-              className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition text-center"
-            >
-              <div className="text-4xl mb-2">📖</div>
-              <h3 className="font-bold text-gray-900 mb-1">Изучение</h3>
-              <span className="text-sm text-blue-600">{studyCount} карт.</span>
-            </Link>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <UiCard className="p-0">
+              <CardContent className="p-0">
+                <Link href={`/decks/${deckId}/study`} className="block p-5">
+              <div className="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center mb-3 text-lg">📖</div>
+              <h3 className="font-semibold text-gray-900 text-sm mb-0.5">Изучение</h3>
+              <Badge variant="secondary">{studyCount} карт.</Badge>
+                </Link>
+              </CardContent>
+            </UiCard>
 
-            <Link
-              href={`/decks/${deckId}/test`}
-              className={`bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition text-center ${testCount === 0 ? 'opacity-60' : ''}`}
-            >
-              <div className="text-4xl mb-2">🎯</div>
-              <h3 className="font-bold text-gray-900 mb-1">Тест</h3>
-              <span className={`text-sm ${testCount > 0 ? 'text-orange-600' : 'text-gray-500'}`}>
-                {testCount > 0 ? `${testCount} готово` : 'Нет'}
-              </span>
-            </Link>
+            <UiCard className={`p-0 ${testCount === 0 ? 'opacity-60' : ''}`}>
+              <CardContent className="p-0">
+                <Link href={`/decks/${deckId}/test`} className="block p-5">
+              <div className="w-9 h-9 bg-indigo-50 rounded-xl flex items-center justify-center mb-3 text-lg">🎯</div>
+              <h3 className="font-semibold text-gray-900 text-sm mb-0.5">Тест</h3>
+              <Badge variant={testCount > 0 ? 'secondary' : 'outline'}>{testCount > 0 ? `${testCount} готово` : 'Нет'}</Badge>
+                </Link>
+              </CardContent>
+            </UiCard>
 
-            <Link
-              href={`/decks/${deckId}/review`}
-              className={`bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition text-center ${reviewCount === 0 ? 'opacity-60' : ''}`}
-            >
-              <div className="text-4xl mb-2">🔄</div>
-              <h3 className="font-bold text-gray-900 mb-1">Повторение</h3>
-              <span className={`text-sm ${reviewCount > 0 ? 'text-green-600' : 'text-gray-500'}`}>
-                {reviewCount > 0 ? `${reviewCount} изучено` : 'Нет'}
-              </span>
-            </Link>
+            <UiCard className={`p-0 ${reviewCount === 0 ? 'opacity-60' : ''}`}>
+              <CardContent className="p-0">
+                <Link href={`/decks/${deckId}/review`} className="block p-5">
+              <div className="w-9 h-9 bg-teal-50 rounded-xl flex items-center justify-center mb-3 text-lg">🔄</div>
+              <h3 className="font-semibold text-gray-900 text-sm mb-0.5">Повторение</h3>
+              <Badge variant={reviewCount > 0 ? 'secondary' : 'outline'}>{reviewCount > 0 ? `${reviewCount} изучено` : 'Нет'}</Badge>
+                </Link>
+              </CardContent>
+            </UiCard>
 
-            <Link
-              href={`/decks/${deckId}/dictation`}
-              className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition text-center"
-            >
-              <div className="text-4xl mb-2">✏️</div>
-              <h3 className="font-bold text-gray-900 mb-1">Диктант</h3>
-              <span className="text-sm text-indigo-600">{studyCount} слов</span>
-            </Link>
+            <UiCard className="p-0">
+              <CardContent className="p-0">
+                <Link href={`/decks/${deckId}/dictation`} className="block p-5">
+              <div className="w-9 h-9 bg-violet-50 rounded-xl flex items-center justify-center mb-3 text-lg">✏️</div>
+              <h3 className="font-semibold text-gray-900 text-sm mb-0.5">Диктант</h3>
+              <Badge variant="secondary">{studyCount} слов</Badge>
+                </Link>
+              </CardContent>
+            </UiCard>
           </div>
         )}
 
         {/* Cards management (owner only) */}
         {isOwner && (
-          <div className="bg-white rounded-xl shadow-lg p-8">
-            <div className="flex justify-between items-center mb-6">
+          <UiCard>
+            <CardContent className="p-6">
+            <div className="flex justify-between items-start gap-4 mb-6">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Карточки ({cards.length})
+                <h2 className="text-lg font-bold text-gray-900 mb-1">
+                  Карточки <span className="text-gray-400 font-normal text-base">({cards.length})</span>
                 </h2>
                 {ttsStats && ttsStats.total > 0 && (
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className="text-gray-700">
-                      🔊 Аудио: {ttsStats.with_tts} из {ttsStats.total} ({ttsStats.percentage}%)
-                    </span>
+                  <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
+                    <span>Аудио: {ttsStats.with_tts} / {ttsStats.total} ({ttsStats.percentage}%)</span>
                     {ttsStats.pending > 0 ? (
-                      <button
+                      <Button
+                        size="sm"
                         onClick={handleGenerateTts}
                         disabled={generatingTts}
-                        className="px-3 py-1 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition disabled:opacity-50"
                       >
-                        {generatingTts ? '⏳ Запуск...' : '🎤 Сгенерировать аудио'}
-                      </button>
+                        {generatingTts ? 'Запуск...' : 'Сгенерировать аудио'}
+                      </Button>
                     ) : (
                       <>
-                        <span className="text-green-600 font-medium">✅ Все аудио готовы</span>
-                        <button
+                        <span className="text-[#057A55] font-medium">Все аудио готовы</span>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={handleGenerateTts}
                           disabled={generatingTts}
-                          className="px-3 py-1 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600 transition disabled:opacity-50"
                         >
-                          {generatingTts ? '⏳ Запуск...' : '🔄 Регенерировать'}
-                        </button>
+                          {generatingTts ? 'Запуск...' : 'Регенерировать'}
+                        </Button>
                       </>
                     )}
                   </div>
                 )}
               </div>
-              <div className="flex gap-3">
-                <Link
-                  href={`/decks/${deckId}/cards/bulk`}
-                  className="px-4 py-2 bg-purple-500 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg font-medium hover:from-purple-600 hover:to-pink-700 transition"
-                >
-                  ✨ Массовое создание
-                </Link>
-                <Link
-                  href={`/decks/${deckId}/cards/new`}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition"
-                >
-                  + Добавить
-                </Link>
+              <div className="flex gap-2 flex-wrap shrink-0">
+                {cards.some(c => !c.image_url) && (
+                  <Button
+                    variant="outline"
+                    onClick={handleFetchAllImages}
+                    disabled={fetchingImages}
+                  >
+                    {fetchingImages ? 'Загружаю...' : 'Загрузить картинки'}
+                  </Button>
+                )}
+                <Button variant="outline" render={<Link href={`/decks/${deckId}/cards/bulk`} />}>Массово</Button>
+                <Button render={<Link href={`/decks/${deckId}/cards/new`} />}>+ Добавить</Button>
               </div>
             </div>
 
             {cards.length === 0 ? (
               <div className="text-center py-12">
-                <div className="text-6xl mb-4">📝</div>
-                <p className="text-gray-700 mb-6">В этом наборе пока нет карточек</p>
+                <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">📝</div>
+                <p className="text-gray-500 text-sm mb-5">В этом наборе пока нет карточек</p>
                 <div className="flex gap-3 justify-center">
-                  <Link
-                    href={`/decks/${deckId}/cards/bulk`}
-                    className="px-6 py-3 bg-purple-500 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-pink-700 transition"
-                  >
-                    ✨ Массовое создание
-                  </Link>
-                  <Link
-                    href={`/decks/${deckId}/cards/new`}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
-                  >
-                    Создать карточку
-                  </Link>
+                  <Button variant="outline" render={<Link href={`/decks/${deckId}/cards/bulk`} />}>Массово добавить</Button>
+                  <Button render={<Link href={`/decks/${deckId}/cards/new`} />}>Создать карточку</Button>
                 </div>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-2">
                 {cards.map((card, index) => (
                   <div
                     key={card.id}
-                    className="border-2 border-gray-200 rounded-lg p-4 hover:border-blue-300 transition"
+                    className="border border-gray-100 rounded-xl p-4 hover:border-gray-200 hover:bg-gray-50/50 transition"
                   >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-3">
-                          <span className="text-sm text-gray-600 font-medium">#{index + 1}</span>
-                          <div className="flex-1 grid grid-cols-2 gap-4">
-                            <div>
-                              <p className="text-xs text-gray-600 mb-1">🇷🇺 Русский:</p>
-                              <p className="text-gray-900 font-medium">{card.ru_text}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-600 mb-1">🇬🇧 Английский:</p>
-                              <p className="text-gray-900 font-medium">{card.en_text}</p>
-                            </div>
+                    <div className="flex justify-between items-start gap-3">
+                      {/* Image thumbnail */}
+                      <div className="shrink-0">
+                        {card.image_url ? (
+                          <img
+                            src={card.image_url}
+                            alt={card.en_text}
+                            className="w-14 h-14 object-cover rounded-xl"
+                          />
+                        ) : (
+                          <div className="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 text-xs text-center leading-tight">
+                            нет фото
+                          </div>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleRefreshImage(card)}
+                          title="Найти другое изображение"
+                        >
+                          обновить
+                        </Button>
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xs text-gray-400 font-medium">#{index + 1}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-xs text-gray-400 mb-0.5">Русский</p>
+                            <p className="text-gray-900 font-medium text-sm">{card.ru_text}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-400 mb-0.5">Английский</p>
+                            <p className="text-gray-900 font-medium text-sm">{card.en_text}</p>
                           </div>
                         </div>
                         {(card.tts_en_url || card.tts_ru_url) && (
-                          <div className="flex items-center gap-2 text-sm text-green-700">
-                            <span>🎤</span>
-                            <span>TTS: {card.tts_en_url ? '🇬🇧' : ''} {card.tts_ru_url ? '🇷🇺' : ''}</span>
+                          <div className="flex items-center gap-1.5 mt-2 text-xs text-[#057A55]">
+                            <span>Аудио:</span>
+                            <span>{card.tts_en_url ? 'EN' : ''} {card.tts_ru_url ? 'RU' : ''}</span>
                           </div>
                         )}
                       </div>
-                      <div className="flex gap-2">
-                        <Link
-                          href={`/decks/${deckId}/cards/${card.id}/edit`}
-                          className="px-3 py-1 text-sm text-blue-600 hover:text-blue-800 font-medium"
+
+                      <div className="flex gap-1.5 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          render={<Link href={`/decks/${deckId}/cards/${card.id}/edit`} />}
                         >
                           Изменить
-                        </Link>
-                        <button
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
                           onClick={() => handleDeleteCard(card.id)}
-                          className="px-3 py-1 text-sm text-red-600 hover:text-red-800 font-medium"
                         >
                           Удалить
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
             )}
-          </div>
+            </CardContent>
+          </UiCard>
         )}
 
         {/* Non-owner: show empty cards message if no cards */}
         {!isOwner && stats !== null && stats.total === 0 && (
-          <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-            <div className="text-6xl mb-4">📝</div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">В этом наборе пока нет карточек</h2>
-          </div>
+          <UiCard className="p-12 text-center">
+            <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">📝</div>
+            <h2 className="text-lg font-bold text-gray-900">В этом наборе пока нет карточек</h2>
+          </UiCard>
         )}
       </div>
     </div>

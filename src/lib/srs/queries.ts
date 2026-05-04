@@ -3,22 +3,29 @@ import type { UserCard, UserCardWithCard, CardData, DeckSrsStats } from './types
 
 /**
  * Lazy init: create 'new' rows in user_cards for cards that don't have one yet.
+ * Pass preloadedCardIds to skip the extra cards fetch when they are already known.
  */
 export async function ensureUserCardsExist(
   supabase: SupabaseClient,
   userId: string,
-  deckId: string
+  deckId: string,
+  preloadedCardIds?: string[]
 ): Promise<void> {
-  // Get all cards in this deck
-  const { data: cards, error: cardsErr } = await supabase
-    .from('cards')
-    .select('id')
-    .eq('deck_id', deckId);
+  let cardIds: string[];
 
-  if (cardsErr) throw cardsErr;
-  if (!cards || cards.length === 0) return;
+  if (preloadedCardIds) {
+    cardIds = preloadedCardIds;
+  } else {
+    const { data: cards, error: cardsErr } = await supabase
+      .from('cards')
+      .select('id')
+      .eq('deck_id', deckId);
+    if (cardsErr) throw cardsErr;
+    cardIds = (cards ?? []).map((c) => c.id);
+  }
 
-  // Get existing user_cards for this user+deck
+  if (cardIds.length === 0) return;
+
   const { data: existing, error: existErr } = await supabase
     .from('user_cards')
     .select('card_id')
@@ -28,12 +35,12 @@ export async function ensureUserCardsExist(
   if (existErr) throw existErr;
 
   const existingCardIds = new Set((existing ?? []).map((r) => r.card_id));
-  const missingCards = cards.filter((c) => !existingCardIds.has(c.id));
+  const missingIds = cardIds.filter((id) => !existingCardIds.has(id));
 
-  if (missingCards.length === 0) return;
+  if (missingIds.length === 0) return;
 
-  const rows = missingCards.map((c) => ({
-    card_id: c.id,
+  const rows = missingIds.map((id) => ({
+    card_id: id,
     user_id: userId,
     deck_id: deckId,
     status: 'new' as const,
