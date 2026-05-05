@@ -115,12 +115,8 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({
-    ownDecks: withStats(ownDecks),
-    groupSections,
-    reviewCount,
-    streak,
-    todayActivity,
-    last7days,
-  });
+  return NextResponse.json(
+    { ownDecks: withStats(ownDecks), groupSections, reviewCount, streak, todayActivity, last7days },
+    { headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60' } }
+  );
 }

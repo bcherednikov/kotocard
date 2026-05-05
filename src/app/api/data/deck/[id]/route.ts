@@ -54,10 +54,8 @@ export async function GET(
   const cards = cardsRes.data ?? [];
   const cardIds = cards.map((c) => c.id);
 
-  return NextResponse.json({
-    deck: deckRes.data,
-    cards,
-    cardIds,
-    srsStats,
-  });
+  return NextResponse.json(
+    { deck: deckRes.data, cards, cardIds, srsStats },
+    { headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60' } }
+  );
 }
