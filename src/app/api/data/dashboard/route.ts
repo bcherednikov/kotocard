@@ -1,26 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { createServerClient, parseCookieHeader } from '@supabase/auth-helpers-nextjs';
-import { supabaseDirectUrl } from '@/lib/supabase/direct-url';
+import { createRouteHandlerSupabase } from '@/lib/supabase/route-handler';
 import { getDecksSrsStats, getReviewCount } from '@/lib/srs/queries';
 import { getStreakData, getTodayActivity, getLast7Days } from '@/lib/analytics/queries';
 
 export const dynamic = 'force-dynamic';
-
-function createRouteHandlerSupabase(req: NextRequest) {
-  const cookieHeader = req.headers.get('cookie') ?? '';
-  const cookies = parseCookieHeader(cookieHeader);
-  return createServerClient(
-    supabaseDirectUrl(),
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (name) => cookies.find((c) => c.name === name)?.value,
-        set: () => {},
-        remove: () => {},
-      },
-    }
-  );
-}
 
 export async function GET(req: NextRequest) {
   const supabase = createRouteHandlerSupabase(req);
