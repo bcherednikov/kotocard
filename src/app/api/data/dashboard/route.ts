@@ -1,22 +1,19 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { createRouteHandlerSupabase } from '@/lib/supabase/route-handler';
+import { verifyUser } from '@/lib/supabase/route-handler';
+import { getServiceRoleClient } from '@/lib/supabase/service-role';
 import { getDecksSrsStats, getReviewCount } from '@/lib/srs/queries';
 import { getStreakData, getTodayActivity, getLast7Days } from '@/lib/analytics/queries';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  const supabase = createRouteHandlerSupabase(req);
+  const user = await verifyUser(req);
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const {
-    data: { user },
-    error: authErr,
-  } = await supabase.auth.getUser();
-  if (authErr || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+  const supabase = getServiceRoleClient();
   const userId = user.id;
+
+  type DeckRow = { id: string; name: string; description: string | null; tags: string[]; owner_id: string };
 
   // Parallel: own decks + group memberships
   const [ownDecksRes, myGroupsRes] = await Promise.all([
@@ -31,11 +28,10 @@ export async function GET(req: NextRequest) {
       .eq('user_id', userId),
   ]);
 
-  const ownDecks = ownDecksRes.data ?? [];
+  const ownDecks = (ownDecksRes.data ?? []) as DeckRow[];
   const myGroups = myGroupsRes.data ?? [];
 
   // Fetch group decks
-  type DeckRow = { id: string; name: string; description: string | null; tags: string[]; owner_id: string };
   const groupMap = new Map<string, { id: string; name: string; decks: DeckRow[] }>();
   const allGroupDecks: DeckRow[] = [];
 
@@ -67,24 +63,12 @@ export async function GET(req: NextRequest) {
   const allDecks = [...ownDecks, ...allGroupDecks];
   const ids = allDecks.map((d) => d.id);
 
-  // Parallel: SRS stats + review count + streak + today activity + last 7 days
+  // Parallel: SRS stats + review count + streak + today + last 7 days
   const [statsMap, reviewCount, streak, todayActivity, last7days] = await Promise.all([
-    ids.length
-      ? getDecksSrsStats(supabase, userId, ids)
-      : Promise.resolve(new Map()),
+    ids.length ? getDecksSrsStats(supabase, userId, ids) : Promise.resolve(new Map()),
     getReviewCount(supabase, userId),
-    getStreakData(supabase, userId).catch(() => ({
-      currentStreak: 0,
-      longestStreak: 0,
-      lastActiveDate: null,
-    })),
-    getTodayActivity(supabase, userId).catch(() => ({
-      wordsStudied: 0,
-      reviewsCompleted: 0,
-      total: 0,
-      goal: 10,
-      completed: false,
-    })),
+    getStreakData(supabase, userId).catch(() => ({ currentStreak: 0, longestStreak: 0, lastActiveDate: null })),
+    getTodayActivity(supabase, userId).catch(() => ({ wordsStudied: 0, reviewsCompleted: 0, total: 0, goal: 10, completed: false })),
     getLast7Days(supabase, userId).catch(() => []),
   ]);
 

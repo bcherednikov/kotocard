@@ -1,30 +1,23 @@
-import { createServerClient, parseCookieHeader, combineChunks } from '@supabase/auth-helpers-nextjs';
-import { supabaseDirectUrl } from './direct-url';
+import { getServiceRoleClient } from './service-role';
 import type { NextRequest } from 'next/server';
+import type { User } from '@supabase/supabase-js';
 
 /**
- * Supabase client for Next.js Route Handlers.
- * Uses the direct Supabase URL (not the /api/supabase proxy) and reads the
- * user session from request cookies, including chunked auth tokens
- * (sb-xxx-auth-token.0, .1, ...) produced by @supabase/ssr.
+ * Extracts and verifies the Bearer token from the Authorization header.
+ *
+ * The browser Supabase client stores the session in localStorage (not cookies),
+ * so cookie-based auth on the server side doesn't work for this app.
+ * Instead, every SWR fetch attaches `Authorization: Bearer <access_token>`,
+ * and we verify it here via the service-role client's auth.getUser().
+ *
+ * Returns the authenticated User, or null if missing / invalid.
  */
-export function createRouteHandlerSupabase(req: NextRequest) {
-  const cookieHeader = req.headers.get('cookie') ?? '';
-  const parsed = parseCookieHeader(cookieHeader);
+export async function verifyUser(req: NextRequest): Promise<User | null> {
+  const authHeader = req.headers.get('authorization') ?? '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  if (!token) return null;
 
-  return createServerClient(
-    supabaseDirectUrl(),
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        // combineChunks joins sb-xxx-auth-token.0 + .1 + ... into one value
-        get: (name) =>
-          combineChunks(name, (chunkName) =>
-            parsed.find((c) => c.name === chunkName)?.value
-          ),
-        set: () => {},
-        remove: () => {},
-      },
-    }
-  );
+  const { data: { user }, error } = await getServiceRoleClient().auth.getUser(token);
+  if (error || !user) return null;
+  return user;
 }

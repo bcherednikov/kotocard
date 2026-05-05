@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { createRouteHandlerSupabase } from '@/lib/supabase/route-handler';
+import { verifyUser } from '@/lib/supabase/route-handler';
+import { getServiceRoleClient } from '@/lib/supabase/service-role';
 import { getDeckSrsStats } from '@/lib/srs/queries';
 
 export const dynamic = 'force-dynamic';
@@ -8,16 +9,10 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = createRouteHandlerSupabase(req);
+  const user = await verifyUser(req);
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const {
-    data: { user },
-    error: authErr,
-  } = await supabase.auth.getUser();
-  if (authErr || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+  const supabase = getServiceRoleClient();
   const { id: deckId } = await params;
 
   const [deckRes, cardsRes, srsStats] = await Promise.all([

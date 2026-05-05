@@ -1,10 +1,19 @@
 import useSWR from 'swr';
+import { supabase } from '@/lib/supabase/client';
 
-const fetcher = (url: string) =>
-  fetch(url).then((r) => {
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.json();
-  });
+/** Fetcher that attaches the current Supabase Bearer token so server-side
+ *  route handlers can authenticate the user (browser stores session in
+ *  localStorage, not cookies, so cookie-based auth on the server won't work). */
+async function fetcher(url: string) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const headers: Record<string, string> = {};
+  if (session?.access_token) {
+    headers['Authorization'] = `Bearer ${session.access_token}`;
+  }
+  const res = await fetch(url, { headers });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
 
 export function useDeckData(deckId: string) {
   return useSWR(deckId ? `/api/data/deck/${deckId}` : null, fetcher, {
