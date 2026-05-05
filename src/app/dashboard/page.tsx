@@ -1,12 +1,10 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { useEffect, useState, useRef } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import { useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { getDecksSrsStats, getReviewCount } from '@/lib/srs/queries';
+import { useDashboard } from '@/hooks/useDeckData';
 import type { DeckSrsStats } from '@/lib/srs/types';
-import { getStreakData, getTodayActivity, getLast7Days } from '@/lib/analytics/queries';
 import type { StreakData, TodayProgress, Last7Days } from '@/lib/analytics/types';
 import { motion, useSpring, useTransform, type MotionValue, useInView } from 'motion/react';
 
@@ -213,81 +211,34 @@ function AnalyticsStrip({ streak, last7, today, totalMastered, wordsThisWeek }: 
 /* ─── Main page ─── */
 export default function DashboardV4Page() {
   const { user, profile } = useAuth();
-  const [myDecks, setMyDecks] = useState<DeckWithStats[]>([]);
-  const [groupSections, setGroupSections] = useState<GroupWithDecks[]>([]);
-  const [reviewReady, setReviewReady] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [streak, setStreak] = useState<StreakData>({ currentStreak: 0, longestStreak: 0, lastActiveDate: null });
-  const [today, setToday] = useState<TodayProgress>({ wordsStudied: 0, reviewsCompleted: 0, total: 0, goal: 10, completed: false });
-  const [last7, setLast7] = useState<Last7Days[]>([]);
-  const [totalMastered, setTotalMastered] = useState(0);
-  const [wordsThisWeek, setWordsThisWeek] = useState(0);
+  const { data, isLoading } = useDashboard();
 
-  useEffect(() => { if (user && profile) load(); }, [user, profile]);
+  const myDecks: DeckWithStats[] = (data?.ownDecks ?? []).map((d: Deck & { stats: DeckSrsStats | null }) => ({
+    ...d,
+    stats: d.stats ?? emptySrs,
+  }));
+  const groupSections: GroupWithDecks[] = (data?.groupSections ?? []).map(
+    (g: { id: string; name: string; decks: (Deck & { stats: DeckSrsStats | null })[] }) => ({
+      ...g,
+      decks: g.decks.map((d) => ({ ...d, stats: d.stats ?? emptySrs })),
+    })
+  );
+  const reviewReady: number = data?.reviewCount ?? 0;
+  const streak: StreakData = data?.streak ?? { currentStreak: 0, longestStreak: 0, lastActiveDate: null };
+  const today: TodayProgress = data?.todayActivity ?? { wordsStudied: 0, reviewsCompleted: 0, total: 0, goal: 10, completed: false };
+  const last7: Last7Days[] = data?.last7days ?? [];
 
-  async function load() {
-    if (!user) return;
-    try {
-      const { data: ownDecks } = await supabase
-        .from('decks').select('id, name, description, tags, owner_id')
-        .eq('owner_id', user.id).order('created_at', { ascending: false });
+  let totalMastered = 0;
+  for (const d of myDecks) totalMastered += d.stats.masteredCount;
+  for (const g of groupSections) for (const d of g.decks) totalMastered += d.stats.masteredCount;
 
-      const groupMap = new Map<string, { id: string; name: string; decks: Deck[] }>();
-      const allGroupDecks: Deck[] = [];
-      const { data: myGroups } = await supabase
-        .from('group_members').select('group_id, groups(id, name)').eq('user_id', user.id);
-
-      if (myGroups?.length) {
-        for (const mg of myGroups) {
-          const g = mg.groups as any;
-          if (g) groupMap.set(g.id, { id: g.id, name: g.name, decks: [] });
-        }
-        const { data: gDecks } = await supabase
-          .from('group_decks').select('group_id, deck:decks(id, name, description, tags, owner_id)')
-          .in('group_id', myGroups.map(g => g.group_id));
-        if (gDecks) {
-          const seen = new Set<string>();
-          for (const gd of gDecks) {
-            const d = gd.deck as unknown as Deck;
-            if (!d) continue;
-            groupMap.get(gd.group_id)?.decks.push(d);
-            if (!seen.has(d.id)) { seen.add(d.id); allGroupDecks.push(d); }
-          }
-        }
-      }
-
-      const allDecks = [...(ownDecks || []), ...allGroupDecks];
-      const ids = allDecks.map(d => d.id);
-
-      const [statsMap, rc, st, td, l7] = await Promise.all([
-        ids.length ? getDecksSrsStats(supabase, user.id, ids) : Promise.resolve(new Map<string, DeckSrsStats>()),
-        getReviewCount(supabase, user.id),
-        getStreakData(supabase, user.id).catch(() => ({ currentStreak: 0, longestStreak: 0, lastActiveDate: null } as StreakData)),
-        getTodayActivity(supabase, user.id).catch(() => ({ wordsStudied: 0, reviewsCompleted: 0, total: 0, goal: 10, completed: false } as TodayProgress)),
-        getLast7Days(supabase, user.id).catch(() => [] as Last7Days[]),
-      ]);
-
-      const ws = (decks: Deck[]) => decks.map(d => ({ ...d, stats: statsMap.get(d.id) ?? emptySrs }));
-      const allWS = ws(allDecks);
-      let mastered = 0, week = 0;
-      for (const d of allWS) mastered += d.stats.masteredCount;
-      for (const d of l7) if (d.completed) week++;
-
-      setMyDecks(ws(ownDecks || []));
-      const secs: GroupWithDecks[] = [];
-      for (const [, e] of groupMap) if (e.decks.length) secs.push({ id: e.id, name: e.name, decks: ws(e.decks) });
-      setGroupSections(secs);
-      setReviewReady(rc);
-      setStreak(st); setToday(td); setLast7(l7);
-      setTotalMastered(mastered); setWordsThisWeek(week);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  }
+  let wordsThisWeek = 0;
+  for (const d of last7) if (d.completed) wordsThisWeek++;
 
   const displayName = profile?.display_name ?? user?.email ?? '';
   const hasContent = myDecks.length > 0 || groupSections.length > 0;
 
-  if (loading) return (
+  if (isLoading) return (
     <div className="flex h-full items-center justify-center">
       <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.4, repeat: Infinity }}
         className="text-gray-400 text-sm">Загрузка...</motion.div>

@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ensureUserCardsExist, getDeckSrsStats } from '@/lib/srs/queries';
+import { useDeckData } from '@/hooks/useDeckData';
 import { DeckSrsProgress } from '@/components/student/DeckSrsProgress';
 import type { DeckSrsStats } from '@/lib/srs/types';
 import { Button } from '@/components/ui/button';
@@ -42,58 +42,28 @@ type TtsStats = {
 export default function DeckDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { user, profile } = useAuth();
-  const [deck, setDeck] = useState<Deck | null>(null);
-  const [cards, setCards] = useState<Card[]>([]);
-  const [stats, setStats] = useState<DeckSrsStats | null>(null);
+  const { user } = useAuth();
   const [ttsStats, setTtsStats] = useState<TtsStats | null>(null);
-  const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [generatingTts, setGeneratingTts] = useState(false);
 
   const deckId = params.id as string;
+  const { data, isLoading, mutate } = useDeckData(deckId);
+
+  const deck: Deck | null = data?.deck ?? null;
+  const cards: Card[] = data?.cards ?? [];
+  const stats: DeckSrsStats | null = data?.srsStats ?? null;
+
   const isOwner = deck && user && deck.owner_id === user.id;
 
+  // Fetch TTS stats separately (owner-only, lightweight)
   useEffect(() => {
-    if (user && profile && deckId) loadAll();
-  }, [user, profile, deckId]);
-
-  async function loadAll() {
-    if (!user || !profile) return;
-    try {
-      const { data, error } = await supabase
-        .from('decks')
-        .select('*')
-        .eq('id', deckId)
-        .single();
-
-      if (error) throw error;
-      setDeck(data);
-
-      // Load cards list (for owner management)
-      const { data: cardsData } = await supabase
-        .from('cards')
-        .select('id, ru_text, en_text, audio_url, tts_en_url, tts_ru_url, position')
-        .eq('deck_id', deckId)
-        .order('position', { ascending: true });
-      setCards(cardsData || []);
-
-      // Ensure user_cards exist + load SRS stats
-      await ensureUserCardsExist(supabase, user.id, deckId);
-      const s = await getDeckSrsStats(supabase, user.id, deckId);
-      setStats(s);
-
-      // Load TTS stats
-      try {
-        const res = await fetch(`/api/decks/${deckId}/generate-tts`);
-        if (res.ok) setTtsStats(await res.json());
-      } catch {}
-    } catch (err) {
-      console.error('Error loading deck:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
+    if (!deckId) return;
+    fetch(`/api/decks/${deckId}/generate-tts`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((d) => { if (d) setTtsStats(d); })
+      .catch(() => {});
+  }, [deckId]);
 
   async function handleGenerateTts() {
     if (!confirm('Запустить генерацию аудио для всех карточек?')) return;
@@ -103,7 +73,7 @@ export default function DeckDetailPage() {
       const data = await res.json();
       if (res.ok) {
         alert(data.message || 'Генерация запущена!');
-        setTimeout(() => { loadAll(); }, 5000);
+        setTimeout(() => { mutate(); }, 5000);
       } else {
         alert(data.error || 'Ошибка запуска генерации');
       }
@@ -119,7 +89,7 @@ export default function DeckDetailPage() {
     try {
       const { error } = await supabase.from('cards').delete().eq('id', cardId);
       if (error) throw error;
-      setCards(prev => prev.filter(c => c.id !== cardId));
+      mutate();
     } catch (err: any) {
       alert(err.message || 'Ошибка удаления');
     }
@@ -139,7 +109,7 @@ export default function DeckDetailPage() {
     }
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
         <p className="text-xl text-gray-800">Загрузка...</p>

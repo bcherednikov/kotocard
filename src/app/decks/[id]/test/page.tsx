@@ -4,7 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useParams, useRouter } from 'next/navigation';
-import { getPrimaryTestCards, getAllDeckCards, updateUserCard } from '@/lib/srs/queries';
+import { useTestData } from '@/hooks/useDeckData';
+import { updateUserCard } from '@/lib/srs/queries';
 import { getNextTestType, handlePrimaryTestCorrect, handlePrimaryTestIncorrect } from '@/lib/srs/engine';
 import { generateChoiceQuestion, generateAudioQuestion, generateDictationQuestion } from '@/lib/srs/question-generator';
 import type { SrsQuestion } from '@/lib/srs/question-generator';
@@ -26,6 +27,7 @@ export default function PrimaryTestPage() {
   const { user, profile } = useAuth();
 
   const deckId = params.id as string;
+  const { data: testData, isLoading } = useTestData(deckId);
 
   const [testCards, setTestCards] = useState<UserCardWithCard[]>([]);
   const [allDeckCards, setAllDeckCards] = useState<CardData[]>([]);
@@ -35,33 +37,23 @@ export default function PrimaryTestPage() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [lastAnswer, setLastAnswer] = useState({ answer: '', isCorrect: false });
   const [isProcessing, setIsProcessing] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [sessionStarted, setSessionStarted] = useState(false);
   const [stats, setStats] = useState({ correct: 0, incorrect: 0 });
 
+  // Populate local state from SWR data once loaded
   useEffect(() => {
-    if (profile && deckId) loadTestData();
-  }, [profile, deckId]);
-
-  async function loadTestData() {
-    if (!profile) return;
-    try {
-      const [cards, deckCards] = await Promise.all([
-        getPrimaryTestCards(supabase, profile.id, deckId),
-        getAllDeckCards(supabase, deckId),
-      ]);
-      const limited = cards.slice(0, MAX_QUESTIONS);
-      setTestCards(limited);
-      setAllDeckCards(deckCards);
-      if (limited.length > 0) {
-        prepareQuestion(limited[0], deckCards);
-        trackActivityInBackground(supabase, profile.id, { study_sessions: 1 });
-      }
-    } catch (err) {
-      console.error('Error loading test data:', err);
-    } finally {
-      setLoading(false);
+    if (!testData || sessionStarted) return;
+    const cards = (testData.testCards ?? []) as UserCardWithCard[];
+    const deckCards = (testData.allDeckCards ?? []) as CardData[];
+    setTestCards(cards);
+    setAllDeckCards(deckCards);
+    setSessionStarted(true);
+    if (cards.length > 0) {
+      prepareQuestion(cards[0], deckCards);
+      if (profile) trackActivityInBackground(supabase, profile.id, { study_sessions: 1 });
     }
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [testData, sessionStarted, profile]);
 
   function prepareQuestion(card: UserCardWithCard, deckCards: CardData[]) {
     const testType = getNextTestType(card);
@@ -141,7 +133,7 @@ export default function PrimaryTestPage() {
     currentTestType === 'audio' ? '🎧 Аудио тест' :
     currentTestType === 'dictation' ? '✍️ Диктант' : 'Тест';
 
-  if (loading) {
+  if (isLoading || !sessionStarted) {
     return (
       <ImmersiveShell backHref={`/decks/${deckId}`} title="Тестирование">
         <div className="flex items-center justify-center h-full">

@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useParams, useRouter } from 'next/navigation';
+import { useStudyData } from '@/hooks/useDeckData';
 import { updateUserCard } from '@/lib/srs/queries';
 import { handleMarkKnow, handleMarkDontKnow } from '@/lib/srs/engine';
 import type { UserCardWithCard } from '@/lib/srs/types';
@@ -17,55 +18,25 @@ export default function StudyPage() {
   const { user, profile } = useAuth();
 
   const deckId = params.id as string;
+  const { data: studyData, isLoading } = useStudyData(deckId);
 
   const [cards, setCards] = useState<UserCardWithCard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [sessionStats, setSessionStats] = useState({ know: 0, dontKnow: 0 });
+  const [sessionStarted, setSessionStarted] = useState(false);
 
+  // Populate local state from SWR data once loaded
   useEffect(() => {
-    if (profile && deckId) loadCards();
-  }, [profile, deckId]);
-
-  async function loadCards() {
-    if (!profile) return;
-    try {
-      const [cardIdsRes, userCardsRes] = await Promise.all([
-        supabase.from('cards').select('id').eq('deck_id', deckId),
-        supabase.from('user_cards').select('*, cards(*)')
-          .eq('user_id', profile.id).eq('deck_id', deckId)
-          .order('created_at', { ascending: true }),
-      ]);
-
-      const allCardIds = (cardIdsRes.data ?? []).map((c) => c.id);
-      let userCards = (userCardsRes.data ?? []) as UserCardWithCard[];
-
-      const existingIds = new Set(userCards.map((uc) => uc.card_id));
-      const missingIds = allCardIds.filter((id) => !existingIds.has(id));
-      if (missingIds.length > 0) {
-        await supabase.from('user_cards').insert(
-          missingIds.map((id) => ({ card_id: id, user_id: profile.id, deck_id: deckId, status: 'new' as const }))
-        );
-        const { data: refreshed } = await supabase
-          .from('user_cards').select('*, cards(*)')
-          .eq('user_id', profile.id).eq('deck_id', deckId)
-          .order('created_at', { ascending: true });
-        userCards = (refreshed ?? []) as UserCardWithCard[];
-      }
-
-      const shuffled = [...userCards].sort(() => Math.random() - 0.5);
-      setCards(shuffled);
-      if (shuffled.length > 0) {
-        trackActivityInBackground(supabase, profile.id, { study_sessions: 1 });
-      }
-    } catch (err) {
-      console.error('Error loading study cards:', err);
-    } finally {
-      setLoading(false);
+    if (!studyData?.userCards || sessionStarted) return;
+    const loaded = studyData.userCards as UserCardWithCard[];
+    setCards(loaded);
+    setSessionStarted(true);
+    if (loaded.length > 0 && profile) {
+      trackActivityInBackground(supabase, profile.id, { study_sessions: 1 });
     }
-  }
+  }, [studyData, sessionStarted, profile]);
 
   async function handleAnswer(isKnow: boolean) {
     if (!user || !cards[currentIndex]) return;
@@ -116,7 +87,7 @@ export default function StudyPage() {
     <Badge variant="red">✗ {sessionStats.dontKnow}</Badge>
   ) : undefined;
 
-  if (loading) {
+  if (isLoading || !sessionStarted) {
     return (
       <ImmersiveShell backHref={`/decks/${deckId}`} title="Изучение">
         <div className="flex items-center justify-center h-full">
